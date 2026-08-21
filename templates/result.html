@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Result - VeriTrust AI</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- html2pdf.js for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg border-bottom py-3 no-print">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('index') }}">
+                <i class="bi bi-shield-check text-primary fs-3"></i>
+                <span class="fw-bold tracking-tight">VeriTrust AI</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}"><i class="bi bi-house-door me-1"></i> Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}"><i class="bi bi-bar-chart-line me-1"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <button id="themeToggleBtn" class="btn btn-outline-secondary btn-icon-only" aria-label="Toggle Theme">
+                            <i class="bi bi-moon-stars"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container py-5">
+        <div class="d-flex justify-content-between align-items-center gap-3 mb-4 no-print">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Analyze Another Review
+            </a>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary" id="btnPrintReport">
+                    <i class="bi bi-printer me-1"></i> Print
+                </button>
+                <button type="button" class="btn btn-primary shadow-sm" id="btnDownloadPDF">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Report
+                </button>
+            </div>
+        </div>
+
+        <!-- Printable Report Container -->
+        <div id="pdfReportContent">
+            <!-- Header for PDF Export -->
+            <div class="pdf-header d-none text-center pb-3 border-bottom mb-4">
+                <h2 class="fw-bold"><i class="bi bi-shield-check text-primary me-2"></i>VeriTrust AI</h2>
+                <h5 class="text-secondary">Fake Review Analysis & Verification Report</h5>
+                <small class="text-muted">Generated on: {{ prediction.created_at }} | Prediction ID: #{{ prediction.id }}</small>
+            </div>
+
+            <div class="row g-4">
+                <!-- Summary Card -->
+                <div class="col-lg-5">
+                    <div class="card shadow border-0 rounded-4 h-100 bg-card">
+                        <div class="card-body p-4 text-center d-flex flex-column justify-content-center align-items-center">
+                            <h5 class="fw-bold mb-4 text-secondary">Verdict & Confidence</h5>
+                            
+                            {% if prediction.prediction_label == 'Fake' %}
+                                <div class="verdict-icon bg-danger-subtle text-danger rounded-circle mb-3">
+                                    <i class="bi bi-x-octagon-fill"></i>
+                                </div>
+                                <span class="badge bg-danger fs-5 px-4 py-2 rounded-pill mb-3">SUSPECTED FAKE</span>
+                            {% else %}
+                                <div class="verdict-icon bg-success-subtle text-success rounded-circle mb-3">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                                <span class="badge bg-success fs-5 px-4 py-2 rounded-pill mb-3">GENUINE REVIEW</span>
+                            {% endif %}
+                            
+                            <h2 class="fw-extrabold display-4 mb-2 text-color">{{ prediction.confidence }}%</h2>
+                            <p class="text-secondary mb-4">Prediction Confidence</p>
+                            
+                            <!-- Chart.js Container -->
+                            <div class="chart-container mb-2" style="position: relative; height:200px; width:200px">
+                                <canvas id="resultChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Review Text -->
+                <div class="col-lg-7">
+                    <div class="card shadow border-0 rounded-4 h-100 bg-card">
+                        <div class="card-body p-4 d-flex flex-column">
+                            <h5 class="fw-bold mb-3 text-secondary">Analyzed Review Text</h5>
+                            <div class="review-text-container p-3 rounded-3 flex-grow-1 border bg-light-subtle">
+                                <p class="mb-0 review-quote text-color">"{{ prediction.review_text }}"</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hand-crafted Metrics / Explanations -->
+                <div class="col-md-6">
+                    <div class="card shadow border-0 rounded-4 bg-card h-100">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-4 text-secondary"><i class="bi bi-bar-chart-steps text-primary me-2"></i>Textual Structural Metrics</h5>
+                            
+                            <!-- Length -->
+                            <div class="metric-row border-bottom py-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-semibold text-color">Review Length</span>
+                                    <small class="d-block text-secondary">Character count</small>
+                                </div>
+                                <span class="badge bg-secondary-subtle text-secondary fs-6 px-3 py-2 fw-medium">
+                                    {{ explanation.dense_metrics.length }} chars
+                                </span>
+                            </div>
+
+                            <!-- Capital Letters -->
+                            <div class="metric-row border-bottom py-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-semibold text-color">Capital Letters</span>
+                                    <small class="d-block text-secondary">High caps indicate artificial hype</small>
+                                </div>
+                                <span class="badge {% if explanation.dense_metrics.capital_letters > 15 %}bg-warning-subtle text-warning{% else %}bg-secondary-subtle text-secondary{% endif %} fs-6 px-3 py-2 fw-medium">
+                                    {{ explanation.dense_metrics.capital_letters }}
+                                </span>
+                            </div>
+
+                            <!-- Exclamations -->
+                            <div class="metric-row border-bottom py-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-semibold text-color">Exclamation Marks</span>
+                                    <small class="d-block text-secondary">Over-punctuated text points to fakes</small>
+                                </div>
+                                <span class="badge {% if explanation.dense_metrics.exclamation_marks > 2 %}bg-warning-subtle text-warning{% else %}bg-secondary-subtle text-secondary{% endif %} fs-6 px-3 py-2 fw-medium">
+                                    {{ explanation.dense_metrics.exclamation_marks }}
+                                </span>
+                            </div>
+
+                            <!-- Word Length -->
+                            <div class="metric-row border-bottom py-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-semibold text-color">Avg Word Length</span>
+                                    <small class="d-block text-secondary">Average chars per word</small>
+                                </div>
+                                <span class="badge bg-secondary-subtle text-secondary fs-6 px-3 py-2 fw-medium">
+                                    {{ explanation.dense_metrics.avg_word_len }}
+                                </span>
+                            </div>
+
+                            <!-- Sentiment -->
+                            <div class="metric-row py-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-semibold text-color">VADER Sentiment Polarity</span>
+                                    <small class="d-block text-secondary">Positive vs Negative score ratio</small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <span class="badge bg-success-subtle text-success fs-7">Pos: {{ explanation.dense_metrics.positive_sentiment }}</span>
+                                    <span class="badge bg-danger-subtle text-danger fs-7">Neg: {{ explanation.dense_metrics.negative_sentiment }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Explanation / Word Contribution -->
+                <div class="col-md-6">
+                    <div class="card shadow border-0 rounded-4 bg-card h-100">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-4 text-secondary"><i class="bi bi-cpu text-primary me-2"></i>ML Logistic Regression Explainer</h5>
+                            
+                            <!-- Positive (Fake) Influencing features -->
+                            {% if explanation.fake_indicators %}
+                                <div class="mb-4">
+                                    <h6 class="fw-bold text-danger mb-2"><i class="bi bi-plus-circle me-1"></i>Top Indicators Pushing Towards FAKE</h6>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% for feat in explanation.fake_indicators[:6] %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-3">
+                                                {{ feat.feature }} <small class="text-black-50">(+{{ "%.2f"|format(feat.contribution) }})</small>
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- Negative (Genuine) Influencing features -->
+                            {% if explanation.genuine_indicators %}
+                                <div>
+                                    <h6 class="fw-bold text-success mb-2"><i class="bi bi-dash-circle me-1"></i>Top Indicators Pushing Towards GENUINE</h6>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% for feat in explanation.genuine_indicators[:6] %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-3">
+                                                {{ feat.feature }} <small class="text-black-50">({{ "%.2f"|format(feat.contribution) }})</small>
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if not explanation.fake_indicators and not explanation.genuine_indicators %}
+                                <div class="text-center text-secondary py-4">
+                                    <i class="bi bi-info-circle fs-3 mb-2"></i>
+                                    <p class="mb-0">No strong features triggered. This review has very standard values.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-4 border-top no-print">
+        <div class="container text-center text-secondary">
+            <p class="mb-1">Fake Product Review Detection using Machine Learning</p>
+            <small>&copy; 2026 VeriTrust AI. Developed for B.Tech AI & ML Curriculum. Runs completely offline.</small>
+        </div>
+    </footer>
+
+    <!-- Pass backend parameters to JS -->
+    <script>
+        const probFake = {{ prediction.prob_fake }};
+        const probGenuine = {{ prediction.prob_genuine }};
+        const predictionLabel = "{{ prediction.prediction_label }}";
+    </script>
+    
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom Javascript -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

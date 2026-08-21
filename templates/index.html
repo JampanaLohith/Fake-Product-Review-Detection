@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake Review Detector - Machine Learning App</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay d-none">
+        <div class="text-center text-white">
+            <div class="spinner-border spinner-custom mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h4 class="fw-semibold">Analyzing Text Features...</h4>
+            <p class="text-white-50">Calculating sentiment scores and token densities...</p>
+        </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg border-bottom py-3">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('index') }}">
+                <i class="bi bi-shield-check text-primary fs-3"></i>
+                <span class="fw-bold tracking-tight">VeriTrust AI</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('index') }}"><i class="bi bi-house-door me-1"></i> Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}"><i class="bi bi-bar-chart-line me-1"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <button id="themeToggleBtn" class="btn btn-outline-secondary btn-icon-only" aria-label="Toggle Theme">
+                            <i class="bi bi-moon-stars"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container py-5">
+        <!-- Alert Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm border-0 mb-4" role="alert">
+                        <div class="d-flex align-items-center gap-2">
+                            {% if category == 'danger' %}
+                                <i class="bi bi-exclamation-octagon-fill fs-5"></i>
+                            {% elif category == 'warning' %}
+                                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                            {% else %}
+                                <i class="bi bi-info-circle-fill fs-5"></i>
+                            {% endif %}
+                            <div>{{ message }}</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Hero Section -->
+        <div class="row align-items-center g-5 mb-5">
+            <div class="col-lg-6 text-center text-lg-start">
+                <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-2 mb-3">Natural Language Processing</span>
+                <h1 class="display-5 fw-bold lh-tight mb-3">Detect Fake Reviews with <span class="text-gradient">Machine Learning</span></h1>
+                <p class="lead text-secondary mb-4">Protect your business and customers from fake online ratings. Enter a product review below, and our model will analyze structural features, lexical cues, and sentiment values to determine if it is genuine or fake.</p>
+                <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-3">
+                    <a href="#analyzer" class="btn btn-primary btn-lg px-4 shadow-sm"><i class="bi bi-cpu me-2"></i> Try Analyzer</a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-lg px-4"><i class="bi bi-bar-chart-line me-2"></i> View Dashboard</a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <!-- Banner Image -->
+                <div class="mb-4 overflow-hidden rounded-4 shadow-lg border border-opacity-10 hover-lift-image">
+                    <img src="{{ url_for('static', filename='images/hero.jpg') }}" alt="AI Trust Banner" class="img-fluid" style="width: 100%; max-height: 220px; object-fit: cover; transition: transform 0.3s ease;">
+                </div>
+                <!-- Visual Features Box -->
+                <div class="feature-showcase shadow-lg rounded-4 p-4 border border-opacity-10 bg-card">
+                    <h5 class="fw-bold mb-4">How it works:</h5>
+                    <div class="d-flex gap-3 mb-4">
+                        <div class="icon-box bg-primary-subtle text-primary">
+                            <i class="bi bi-funnel"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Lexical Analysis</h6>
+                            <p class="text-secondary mb-0">Processes n-grams using TF-IDF (Term Frequency-Inverse Document Frequency) to find suspicious lexical phrases.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3 mb-4">
+                        <div class="icon-box bg-success-subtle text-success">
+                            <i class="bi bi-percent"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Stylometric Statistics</h6>
+                            <p class="text-secondary mb-0">Computes punctuation density (e.g. exclamation marks), character lengths, and capitalization ratios.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="icon-box bg-info-subtle text-info">
+                            <i class="bi bi-emoji-smile"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1">VADER Sentiment Polarity</h6>
+                            <p class="text-secondary mb-0">Detects extreme positive or negative sentiment mismatching the typical product evaluation.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analyzer Section -->
+        <div id="analyzer" class="scroll-mt py-4">
+            <div class="card shadow-lg border-0 rounded-4 bg-card">
+                <div class="card-header border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-search text-primary fs-4"></i>
+                        <h4 class="card-title fw-bold mb-0">Review Sentiment & Authenticity Analyzer</h4>
+                    </div>
+                    <span id="charCounter" class="badge bg-secondary-subtle text-secondary py-2 px-3 fw-medium">0 / 2000 chars</span>
+                </div>
+                <div class="card-body p-4">
+                    <form id="predictionForm" action="{{ url_for('predict') }}" method="POST">
+                        <div class="mb-4">
+                            <label for="reviewTextArea" class="form-label fw-semibold text-secondary">Paste Product Review Text</label>
+                            <textarea class="form-control form-control-lg rounded-3" id="reviewTextArea" name="review" rows="6" placeholder="Type or paste the product review here (minimum 15 characters, maximum 2000)..." required maxlength="2000"></textarea>
+                            <div class="invalid-feedback mt-2" id="validationFeedback">
+                                Please write at least 15 characters to get a reliable ML prediction.
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-outline-primary" id="btnGenuineSample">
+                                    <i class="bi bi-check-circle me-1"></i> Genuine Review Sample
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" id="btnFakeSample">
+                                    <i class="bi bi-x-circle me-1"></i> Fake Review Sample
+                                </button>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-secondary px-4 py-2" id="btnClear">
+                                    <i class="bi bi-trash me-1"></i> Clear
+                                </button>
+                                <button type="submit" class="btn btn-primary px-5 py-2 shadow-sm" id="btnSubmit">
+                                    <i class="bi bi-magic me-1"></i> Run Predictor
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-4 border-top">
+        <div class="container text-center text-secondary">
+            <p class="mb-1">Fake Product Review Detection using Machine Learning</p>
+            <small>&copy; 2026 VeriTrust AI. Developed for B.Tech AI & ML Curriculum. Runs completely offline.</small>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom Javascript -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

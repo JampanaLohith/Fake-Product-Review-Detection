@@ -1,0 +1,41 @@
+{
+    "best_model_name": "Logistic Regression",
+    "logistic_regression": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "confusion_matrix": [
+            [
+                96,
+                0
+            ],
+            [
+                0,
+                20
+            ]
+        ],
+        "cv_mean": 1.0
+    },
+    "random_forest": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "confusion_matrix": [
+            [
+                96,
+                0
+            ],
+            [
+                0,
+                20
+            ]
+        ]
+    },
+    "dataset_stats": {
+        "total_reviews": 578,
+        "genuine_count": 480,
+        "fake_count": 98
+    }
+}
