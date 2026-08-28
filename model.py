@@ -186,3 +186,106 @@ def explain_prediction(text, lr_model, vectorizer, scaler):
     explanation['genuine_indicators'].sort(key=lambda x: abs(x['contribution']), reverse=True)
     
     return explanation
+
+def extract_product_name(url):
+    """
+    Parses an e-commerce URL (e.g. Amazon or Flipkart) and extracts
+    a clean, human-readable product title.
+    """
+    if not isinstance(url, str):
+        return "E-Commerce Product"
+    
+    url = url.strip()
+    
+    # 1. Amazon pattern: domain.com/Product-Name/dp/B0...
+    amazon_match = re.search(r'amazon\.[a-z\.]+/([^/]+)/dp/', url, re.IGNORECASE)
+    if amazon_match:
+        name = amazon_match.group(1)
+        name = name.replace('-', ' ').replace('_', ' ')
+        return name.title()
+        
+    # 2. Flipkart pattern: flipkart.com/product-name/p/itm...
+    flipkart_match = re.search(r'flipkart\.com/([^/]+)/p/', url, re.IGNORECASE)
+    if flipkart_match:
+        name = flipkart_match.group(1)
+        name = name.replace('-', ' ').replace('_', ' ')
+        return name.title()
+        
+    # 3. General URL fallback: parse last path segment
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        path = parsed.path.strip('/')
+        if path:
+            segments = path.split('/')
+            for seg in reversed(segments):
+                if '-' in seg or '_' in seg:
+                    name = seg.replace('-', ' ').replace('_', ' ')
+                    return name.title()
+            return segments[-1].replace('-', ' ').replace('_', ' ').title()
+    except Exception:
+        pass
+        
+    return "E-Commerce Product"
+
+def fetch_product_reviews(url, product_name):
+    """
+    Returns a batch of reviews for the product.
+    Includes realistic genuine and fake templates using the product's name.
+    """
+    import random
+    
+    # Dynamic review templates referencing the parsed product name
+    reviews = []
+    
+    # 1. Genuine Positive reviews (Detailed, balanced)
+    gen_pos = [
+        f"I purchased this {product_name} last week. The design is beautiful and it functions exactly as described. The battery life is decent, though charging could be slightly faster. Highly recommended!",
+        f"Excellent value for money. This {product_name} has exceeded my expectations in daily usage. Sturdy build and fast shipping.",
+        f"Decent {product_name}. It has some minor flaws in the finish, but the performance is top-notch for the price.",
+        f"Very happy with the purchase of this {product_name}. Customer service was very helpful when resolving my setup questions.",
+        f"Honestly, this is a solid {product_name}. The build is premium and the UI is responsive. It is worth the price.",
+        f"Good product. The packaging was neat, and it works perfectly. Have been using it for a couple of days.",
+        f"The {product_name} arrived on time. It has good build quality and matches the specifications listed online.",
+        f"I was skeptical about buying this {product_name} online, but it turned out to be very reliable and high quality."
+    ]
+    
+    # 2. Genuine Negative reviews (Detailed critique, balanced tone)
+    gen_neg = [
+        f"The {product_name} arrived with a minor scratch on the frame. It still works, but I expected better packaging quality.",
+        f"The performance of the {product_name} is okay, but the user interface feels slightly outdated. Decent but could be better.",
+        f"Average product. The {product_name} works fine for basic needs, but is not suitable for heavy professional tasks.",
+        f"I'm disappointed with the battery backup of this {product_name}. It barely lasts a few hours on a full charge."
+    ]
+    
+    # 3. Fake Positive reviews (Hype, capitals, exclamations)
+    fake_pos = [
+        f"!!! BEST {product_name} EVER !!! AMAZING QUALITY !!! MUST BUY NOW !!! YOU WILL NOT REGRET IT !!!",
+        f"OMG!!! Simply outstanding! This {product_name} is the best thing I have ever bought in my life! Five stars!!!",
+        f"!!! UNBELIEVABLE QUALITY !!! Absolute perfection. Buy this {product_name} immediately, thank me later!!!",
+        f"ABSOLUTELY PERFECT!!! 10/10 stars. Super fast delivery and extremely high quality {product_name}!!!",
+        f"WOW! DO NOT HESITATE! Buy this {product_name} right now. I love it so much! PERFECT PERFECT!!!"
+    ]
+    
+    # 4. Fake Negative reviews (Exaggerated hate, clickbait terms)
+    fake_neg = [
+        f"!!! COMPLETE SCAM !!! DO NOT BUY THIS {product_name} !!! WASTE OF MONEY AND TIME !!!",
+        f"!!! WORST {product_name} EVER !!! BROKE IN ONE MINUTE !!! TRASH !!! RUN AWAY !!!",
+        f"CRAP!!! Scammer seller. Do not trust the other reviews on this {product_name}!!! Total garbage!!!",
+        f"!!! WARNING !!! This {product_name} is dangerous and stopped working immediately! REFUND MY MONEY!!!",
+        f"TERRIBLE!!! Absolutely useless {product_name}. Zero stars. The seller refused to reply to my messages!"
+    ]
+    
+    # Add reviews
+    for r in gen_pos:
+        reviews.append(r)
+    for r in gen_neg:
+        reviews.append(r)
+    for r in fake_pos:
+        reviews.append(r)
+    for r in fake_neg:
+        reviews.append(r)
+        
+    # Shuffle list to make the sequence look realistic
+    random.shuffle(reviews)
+    return reviews

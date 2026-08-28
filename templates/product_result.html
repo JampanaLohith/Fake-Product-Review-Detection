@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Analysis Report - VeriTrust AI</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- html2pdf.js for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg border-bottom py-3 no-print">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('index') }}">
+                <i class="bi bi-shield-check text-primary fs-3"></i>
+                <span class="fw-bold tracking-tight">VeriTrust AI</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}"><i class="bi bi-house-door me-1"></i> Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}"><i class="bi bi-bar-chart-line me-1"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <button id="themeToggleBtn" class="btn btn-outline-secondary btn-icon-only" aria-label="Toggle Theme">
+                            <i class="bi bi-moon-stars"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container py-5">
+        <div class="d-flex justify-content-between align-items-center gap-3 mb-4 no-print">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Analyze Another Product Link
+            </a>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary" id="btnPrintReport">
+                    <i class="bi bi-printer me-1"></i> Print
+                </button>
+                <button type="button" class="btn btn-primary shadow-sm" id="btnDownloadPDF">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Report
+                </button>
+            </div>
+        </div>
+
+        <!-- Printable Report Container -->
+        <div id="pdfReportContent">
+            <!-- Header for PDF Export -->
+            <div class="pdf-header d-none text-center pb-3 border-bottom mb-4">
+                <h2 class="fw-bold"><i class="bi bi-shield-check text-primary me-2"></i>VeriTrust AI</h2>
+                <h5 class="text-secondary">E-Commerce Product Review Trust Report</h5>
+                <small class="text-muted">Generated on: {{ analysis.created_at }} | Analysis ID: #P{{ analysis.id }}</small>
+            </div>
+
+            <!-- Product Header Summary Card -->
+            <div class="card shadow-sm border-0 rounded-4 p-4 mb-4 bg-card">
+                <div class="row align-items-center g-4">
+                    <div class="col-md-8">
+                        <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-2 mb-2">Product URL Analysis</span>
+                        <h2 class="fw-bold mb-2 text-color">{{ analysis.product_name }}</h2>
+                        <a href="{{ analysis.product_url }}" target="_blank" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1 overflow-hidden text-truncate w-100" style="max-width: 600px;">
+                            <i class="bi bi-link-45deg fs-5 flex-shrink-0"></i>
+                            <span class="text-truncate">{{ analysis.product_url }}</span>
+                            <i class="bi bi-box-arrow-up-right small ms-1 flex-shrink-0"></i>
+                        </a>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        {% if analysis.trust_score >= 80.0 %}
+                            <span class="badge bg-success fs-6 px-4 py-2.5 rounded-pill"><i class="bi bi-shield-fill-check me-1"></i> HIGHLY TRUSTED</span>
+                        {% elif analysis.trust_score >= 50.0 %}
+                            <span class="badge bg-warning text-dark fs-6 px-4 py-2.5 rounded-pill"><i class="bi bi-shield-fill-exclamation me-1"></i> MODERATELY TRUSTED</span>
+                        {% else %}
+                            <span class="badge bg-danger fs-6 px-4 py-2.5 rounded-pill"><i class="bi bi-shield-fill-x me-1"></i> LOW TRUST / SPAM ALERT</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats & Chart Row -->
+            <div class="row g-4 mb-4">
+                <!-- Trust Metric Gauge Card -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="card shadow border-0 rounded-4 h-100 bg-card">
+                        <div class="card-body p-4 text-center d-flex flex-column justify-content-center align-items-center">
+                            <h5 class="fw-bold mb-3 text-secondary">Trust Rating Score</h5>
+                            
+                            <h1 class="fw-extrabold display-3 mb-1 {% if analysis.trust_score >= 80.0 %}text-success{% elif analysis.trust_score >= 50.0 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ analysis.trust_score }}%
+                            </h1>
+                            <p class="text-secondary small px-3 mb-0">
+                                This score represents the percentage of reviews determined to be **Genuine** by the ML model.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Summary Breakdown -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="card shadow border-0 rounded-4 h-100 bg-card">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-4 text-secondary">Reviews Breakdown</h5>
+                            
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2.5 mb-2.5">
+                                <span class="fw-semibold text-color">Total Analyzed</span>
+                                <span class="badge bg-secondary-subtle text-secondary fs-6 px-3 py-1.5 fw-medium">{{ analysis.total_reviews }}</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2.5 mb-2.5">
+                                <span class="fw-semibold text-success"><i class="bi bi-check-circle me-1"></i> Genuine Reviews</span>
+                                <span class="badge bg-success-subtle text-success fs-6 px-3 py-1.5 fw-medium">{{ analysis.genuine_count }}</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold text-danger"><i class="bi bi-x-octagon me-1"></i> Fake / Spam Reviews</span>
+                                <span class="badge bg-danger-subtle text-danger fs-6 px-3 py-1.5 fw-medium">{{ analysis.fake_count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart.js Doughnut Card -->
+                <div class="col-lg-4 col-md-12">
+                    <div class="card shadow border-0 rounded-4 h-100 bg-card">
+                        <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center">
+                            <h5 class="fw-bold mb-3 text-secondary">Proportion Chart</h5>
+                            <div class="chart-container" style="position: relative; height:150px; width:150px">
+                                <canvas id="productDonutChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List of Analyzed Reviews -->
+            <div class="card shadow border-0 rounded-4 bg-card mb-5">
+                <div class="card-header border-bottom py-3 px-4">
+                    <h5 class="fw-bold mb-0 text-secondary"><i class="bi bi-list-stars text-primary me-2"></i>Analyzed Reviews Audit List</h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Bootstrap Filter Tabs -->
+                    <ul class="nav nav-tabs mb-4" id="reviewFilterTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="all-reviews-tab" data-bs-toggle="tab" data-bs-target="#all-reviews-pane" type="button" role="tab" aria-controls="all-reviews-pane" aria-selected="true">
+                                All Reviews <span class="badge bg-secondary-subtle text-secondary ms-1">{{ reviews|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link text-danger" id="fake-reviews-tab" data-bs-toggle="tab" data-bs-target="#fake-reviews-pane" type="button" role="tab" aria-controls="fake-reviews-pane" aria-selected="false">
+                                Flagged as Fake <span class="badge bg-danger-subtle text-danger ms-1">{{ fake_reviews|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link text-success" id="genuine-reviews-tab" data-bs-toggle="tab" data-bs-target="#genuine-reviews-pane" type="button" role="tab" aria-controls="genuine-reviews-pane" aria-selected="false">
+                                Verified Genuine <span class="badge bg-success-subtle text-success ms-1">{{ genuine_reviews|length }}</span>
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="reviewFilterTabContent">
+                        <!-- Tab 1: All Reviews List -->
+                        <div class="tab-pane fade show active" id="all-reviews-pane" role="tabpanel" aria-labelledby="all-reviews-tab" tabindex="0">
+                            <div class="review-list">
+                                {% for r in reviews %}
+                                    <div class="review-item p-3 border rounded-3 mb-3 bg-light-subtle d-flex flex-column gap-2">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <span class="fw-semibold text-secondary">Review #{{ loop.index }}</span>
+                                            <div class="d-flex align-items-center gap-2">
+                                                {% if r.prediction_label == 'Fake' %}
+                                                    <span class="badge bg-danger-subtle text-danger px-2.5 py-1.5 rounded-pill border border-danger-subtle">FLAGGED AS FAKE</span>
+                                                {% else %}
+                                                    <span class="badge bg-success-subtle text-success px-2.5 py-1.5 rounded-pill border border-success-subtle">VERIFIED GENUINE</span>
+                                                {% endif %}
+                                                <span class="badge bg-secondary-subtle text-secondary py-1 px-2">{{ r.confidence }}% conf</span>
+                                            </div>
+                                        </div>
+                                        <p class="mb-0 review-quote text-color">"{{ r.review_text }}"</p>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Fake Only Reviews List -->
+                        <div class="tab-pane fade" id="fake-reviews-pane" role="tabpanel" aria-labelledby="fake-reviews-tab" tabindex="0">
+                            <div class="review-list">
+                                {% for r in fake_reviews %}
+                                    <div class="review-item p-3 border border-danger-subtle rounded-3 mb-3 bg-danger-subtle bg-opacity-5 d-flex flex-column gap-2">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <span class="fw-semibold text-secondary">Review #{{ loop.index }}</span>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-danger-subtle text-danger px-2.5 py-1.5 rounded-pill border border-danger-subtle">FLAGGED AS FAKE</span>
+                                                <span class="badge bg-secondary-subtle text-secondary py-1 px-2">{{ r.confidence }}% conf</span>
+                                            </div>
+                                        </div>
+                                        <p class="mb-0 review-quote text-color">"{{ r.review_text }}"</p>
+                                    </div>
+                                {% next %}
+                                {% else %}
+                                    <div class="text-center text-secondary py-5">
+                                        <i class="bi bi-shield-check fs-2 text-success mb-2 d-block"></i>
+                                        No fake reviews detected. All product reviews are classified as Genuine!
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: Genuine Only Reviews List -->
+                        <div class="tab-pane fade" id="genuine-reviews-pane" role="tabpanel" aria-labelledby="genuine-reviews-tab" tabindex="0">
+                            <div class="review-list">
+                                {% for r in genuine_reviews %}
+                                    <div class="review-item p-3 border border-success-subtle rounded-3 mb-3 bg-success-subtle bg-opacity-5 d-flex flex-column gap-2">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <span class="fw-semibold text-secondary">Review #{{ loop.index }}</span>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-success-subtle text-success px-2.5 py-1.5 rounded-pill border border-success-subtle">VERIFIED GENUINE</span>
+                                                <span class="badge bg-secondary-subtle text-secondary py-1 px-2">{{ r.confidence }}% conf</span>
+                                            </div>
+                                        </div>
+                                        <p class="mb-0 review-quote text-color">"{{ r.review_text }}"</p>
+                                    </div>
+                                {% next %}
+                                {% else %}
+                                    <div class="text-center text-secondary py-5">
+                                        <i class="bi bi-exclamation-triangle fs-2 text-danger mb-2 d-block"></i>
+                                        No genuine reviews detected. All product reviews are classified as Fake/Spam!
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-4 border-top no-print">
+        <div class="container text-center text-secondary">
+            <p class="mb-1">Fake Product Review Detection using Machine Learning</p>
+            <small>&copy; 2026 VeriTrust AI. Developed for B.Tech AI & ML Curriculum. Runs completely offline.</small>
+        </div>
+    </footer>
+
+    <!-- Pass backend parameters to JS -->
+    <script>
+        const probFake = {{ analysis.fake_count }};
+        const probGenuine = {{ analysis.genuine_count }};
+        const predictionLabel = "Product Analysis";
+    </script>
+    
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom Javascript -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

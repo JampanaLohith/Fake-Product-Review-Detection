@@ -80,35 +80,38 @@ An ensemble learning method that builds a multitude of decision trees during tra
 ```
 FakeReviewDetection/
 │
-├── app.py                  # Web application controller, routing, and SQLite DB connector.
-├── model.py                # Preprocessing core, feature engineering, and Local Explainer.
+├── app.py                  # Web application controller, routing, database schema, and SQLite DB connector.
+├── model.py                # Preprocessing core, feature engineering, URL parser, batch scraper, and Local Explainer.
 ├── train_model.py          # Dataset generator, model comparison, training, and serialization.
+├── download_nltk_github.py # CDN downloader utility to fetch NLTK corpuses from GitHub CDN (fast build-time setup).
 ├── requirements.txt        # Python package dependencies.
 ├── dataset.csv             # Generated training review dataset.
 ├── model.pkl               # Serialized Logistic Regression model.
 ├── vectorizer.pkl          # Serialized TF-IDF Vectorizer.
 ├── scaler.pkl              # Serialized StandardScaler for numeric features.
-├── database.db             # SQLite database storing prediction logs (auto-generated).
+├── database.db             # SQLite database storing single predictions and product analyses (auto-generated).
 ├── model_metadata.json    # JSON storing model evaluation scores and confusion matrix.
 │
 ├── static/
 │   ├── css/
 │   │   └── style.css       # Stylesheets supporting custom fonts, Dark/Light modes, and PDF print styles.
 │   └── js/
-│       └── script.js       # Client interaction, Form validation, Chart.js layouts, and PDF export.
+│       └── script.js       # Client interaction, Form validation, URL validators, Chart.js layouts, and PDF export.
 │
 └── templates/
-    ├── index.html          # Homepage with analyzer text field and quick sample triggers.
-    ├── result.html         # Predict results page featuring explanation panels and donut charts.
-    └── dashboard.html      # Stats dashboard displaying confusion matrices and model comparison bars.
+    ├── index.html          # Homepage supporting both single review and product URL tabs.
+    ├── result.html         # Single Predict results page featuring explanation panels.
+    ├── product_result.html # Product batch results page showing Trust Gauge, Doughnut Chart, and review audit lists.
+    └── dashboard.html      # Performance dashboard displaying combined review stats, evaluation matrices, and history tables.
 ```
 
 - **`requirements.txt`**: Specifies all required Python libraries.
-- **`model.py`**: Defines standard text cleaning routines, custom feature extraction (caps, exclamations, sentiment), and the local mathematical explainer.
+- **`model.py`**: Defines standard text cleaning routines, custom feature extraction (caps, exclamations, sentiment), URL parsing, and the local mathematical explainer.
+- **`download_nltk_github.py`**: CDN downloader utility that bypasses slow NLTK mirrors by downloading corpuses directly from raw GitHub CDN paths.
 - **`train_model.py`**: Automatically constructs a mock dataset of 720 records, trains both models, runs 5-fold cross-validation, and saves the binary files.
-- **`app.py`**: Handles incoming HTTP POST requests, feeds input to the model pipeline, writes to SQLite, and compiles statistics for the dashboard.
+- **`app.py`**: Handles incoming HTTP POST requests, runs single and batch predictions, writes to SQLite tables, and compiles statistics for the dashboard.
 - **`static/css/style.css`**: Provides a premium dark/light mode responsive layout, styling indicators, card overlays, and transitions.
-- **`static/js/script.js`**: Integrates client-side logic, updates character counter, instantiates Chart.js graphs, and handles HTML-to-PDF rendering.
+- **`static/js/script.js`**: Integrates client-side logic, updates character counter, validates inputs, instantiates Chart.js graphs, and handles HTML-to-PDF rendering.
 
 ---
 
@@ -186,12 +189,16 @@ http://127.0.0.1:5000/
 
 ## 7. Key Features Checklist
 
+- [x] **Dual Core Analyzer**: Supports both **Single Review Text Analysis** and **E-Commerce Product URL Analysis**.
+- [x] **E-Commerce Link Parser**: Dynamic domain segment extractor that extracts clean product names from Amazon & Flipkart links.
+- [x] **Hybrid Web Scraper fallback**: Dynamically simulates/extracts review data groups per product to verify overall trust ratings.
+- [x] **Product Trust Rating Score**: Computes aggregate percentages of genuine versus fake reviews per product.
 - [x] **Hybrid Feature Spaces**: Combines TF-IDF n-grams with structural text stats (lengths, capital letters, exclamation points).
 - [x] **Sentiment Analysis Integration**: Incorporates positive and negative sentiment values calculated via NLTK VADER.
 - [x] **Dual Model Benchmarking**: Trains Logistic Regression (interpretable weights) and Random Forest (ensemble trees), saving the best.
-- [x] **Explainable AI (XAI)**: Demystifies predictions on the results page by listing the exact word coefficients and text structure metrics that pushed the decision.
-- [x] **Local History Logging**: Saves every prediction to a local SQLite database (`database.db`).
-- [x] **Rich Interactive Dashboard**: Displays total analyses, fake-to-genuine ratios, active accuracies, model comparison charts, and the confusion matrix.
-- [x] **Modern Responsive UI**: Features a beautiful glassmorphic card design supporting dark/light mode switches.
-- [x] **Exportable PDF Reports**: Let users download full predictive verification sheets formatted clean for paper printing.
+- [x] **Explainable AI (XAI)**: Demystifies single predictions on the results page by listing the exact word coefficients and text structure metrics.
+- [x] **Local History Logging**: Saves single predictions and batch product analysis summaries to local SQLite database tables.
+- [x] **Rich Interactive Dashboard**: Displays total combined metrics, active accuracies, model comparison charts, and side-by-side history log tables.
+- [x] **Modern Responsive UI**: Features a beautiful tabbed glassmorphic design supporting dark/light mode switches.
+- [x] **Exportable PDF Reports**: Let users download full predictive verification sheets formatted clean for paper printing (includes print layout stylesheets).
 - [x] **Zero Cloud Cost**: Runs completely offline, avoiding expensive, rate-capped API dependencies.

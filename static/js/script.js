@@ -116,9 +116,63 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ----------------------------------------------------
+    // 3b. Inject URL Samples & URL Validation (Home Page)
+    // ----------------------------------------------------
+    const productUrlInput = document.getElementById("productUrlInput");
+    const productUrlForm = document.getElementById("productUrlForm");
+    const urlValidationFeedback = document.getElementById("urlValidationFeedback");
+    const btnAmazonSample = document.getElementById("btnAmazonSample");
+    const btnFlipkartSample = document.getElementById("btnFlipkartSample");
+    const btnClearUrl = document.getElementById("btnClearUrl");
+
+    const sampleAmazon = "https://www.amazon.in/Apple-iPhone-15-Black-128GB/dp/B0CHX1W1Y2";
+    const sampleFlipkart = "https://www.flipkart.com/apple-iphone-15-black-128-gb/p/itm2d82914";
+
+    if (btnAmazonSample && productUrlInput) {
+        btnAmazonSample.addEventListener("click", function () {
+            productUrlInput.value = sampleAmazon;
+            productUrlInput.classList.remove("is-invalid");
+            if (urlValidationFeedback) urlValidationFeedback.style.display = "none";
+        });
+    }
+
+    if (btnFlipkartSample && productUrlInput) {
+        btnFlipkartSample.addEventListener("click", function () {
+            productUrlInput.value = sampleFlipkart;
+            productUrlInput.classList.remove("is-invalid");
+            if (urlValidationFeedback) urlValidationFeedback.style.display = "none";
+        });
+    }
+
+    if (btnClearUrl && productUrlInput) {
+        btnClearUrl.addEventListener("click", function () {
+            productUrlInput.value = "";
+            productUrlInput.classList.remove("is-invalid");
+            if (urlValidationFeedback) urlValidationFeedback.style.display = "none";
+        });
+    }
+
+    if (productUrlForm && productUrlInput) {
+        productUrlForm.addEventListener("submit", function (event) {
+            const urlVal = productUrlInput.value.trim();
+            if (!urlVal.startsWith("http://") && !urlVal.startsWith("https://")) {
+                event.preventDefault();
+                productUrlInput.classList.add("is-invalid");
+                if (urlValidationFeedback) urlValidationFeedback.style.display = "block";
+            } else {
+                productUrlInput.classList.remove("is-invalid");
+                if (urlValidationFeedback) urlValidationFeedback.style.display = "none";
+                if (loadingOverlay) loadingOverlay.classList.remove("d-none");
+            }
+        });
+    }
+
+    // ----------------------------------------------------
     // 4. Chart.js Result Visuals (Result Page)
     // ----------------------------------------------------
     const resultChartCtx = document.getElementById("resultChart");
+    const productDonutChartCtx = document.getElementById("productDonutChart");
+    
     if (resultChartCtx && typeof probFake !== 'undefined' && typeof probGenuine !== 'undefined') {
         const labels = ['Genuine Prob', 'Fake Prob'];
         const data = [probGenuine, probFake];
@@ -149,6 +203,41 @@ document.addEventListener("DOMContentLoaded", function () {
                         callbacks: {
                             label: function (context) {
                                 return `${context.label}: ${(context.raw * 100).toFixed(2)}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    if (productDonutChartCtx && typeof probFake !== 'undefined' && typeof probGenuine !== 'undefined') {
+        const labels = ['Genuine Reviews', 'Fake Reviews'];
+        const data = [probGenuine, probFake];
+        
+        new Chart(productDonutChartCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: ['#22c55e', '#ef4444'],
+                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--card-bg').trim() || '#ffffff',
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return `${context.label}: ${context.raw}`;
                             }
                         }
                     }

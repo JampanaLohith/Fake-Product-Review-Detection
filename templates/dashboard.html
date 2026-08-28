@@ -71,60 +71,90 @@
         <!-- 1. Stats Counter Cards -->
         <div class="row g-4 mb-5">
             <!-- Total Analyzed -->
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-md-4 col-lg-2">
                 <div class="card shadow-sm border-0 rounded-4 bg-card h-100 p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon bg-primary-subtle text-primary">
                             <i class="bi bi-database"></i>
                         </div>
                         <div>
-                            <h3 class="fw-extrabold mb-0 text-color" id="statTotal">{{ total_reviews }}</h3>
-                            <small class="text-secondary fw-medium">Total Analyzed</small>
+                            <h4 class="fw-extrabold mb-0 text-color" id="statTotal">{{ total_reviews }}</h4>
+                            <small class="text-secondary fw-semibold" style="font-size: 0.75rem;">Total Reviews</small>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Fake Detected -->
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-md-4 col-lg-2">
                 <div class="card shadow-sm border-0 rounded-4 bg-card h-100 p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon bg-danger-subtle text-danger">
                             <i class="bi bi-x-octagon"></i>
                         </div>
                         <div>
-                            <h3 class="fw-extrabold mb-0 text-color" id="statFake">{{ fake_count }}</h3>
-                            <small class="text-secondary fw-medium">Fake Detected</small>
+                            <h4 class="fw-extrabold mb-0 text-color" id="statFake">{{ fake_count }}</h4>
+                            <small class="text-secondary fw-semibold" style="font-size: 0.75rem;">Fake Reviews</small>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Genuine Detected -->
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-md-4 col-lg-2">
                 <div class="card shadow-sm border-0 rounded-4 bg-card h-100 p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon bg-success-subtle text-success">
                             <i class="bi bi-check-circle"></i>
                         </div>
                         <div>
-                            <h3 class="fw-extrabold mb-0 text-color" id="statGenuine">{{ genuine_count }}</h3>
-                            <small class="text-secondary fw-medium">Genuine Reviews</small>
+                            <h4 class="fw-extrabold mb-0 text-color" id="statGenuine">{{ genuine_count }}</h4>
+                            <small class="text-secondary fw-semibold" style="font-size: 0.75rem;">Genuine Reviews</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Logged -->
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card shadow-sm border-0 rounded-4 bg-card h-100 p-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="stat-icon bg-secondary-subtle text-secondary" style="background-color: rgba(139, 92, 246, 0.15) !important; color: #8b5cf6 !important;">
+                            <i class="bi bi-link-45deg"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-extrabold mb-0 text-color">{{ total_products }}</h4>
+                            <small class="text-secondary fw-semibold" style="font-size: 0.75rem;">Products Logged</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Average Trust Score -->
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card shadow-sm border-0 rounded-4 bg-card h-100 p-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-shield-fill-check"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-extrabold mb-0 text-color">{{ avg_trust_score }}%</h4>
+                            <small class="text-secondary fw-semibold" style="font-size: 0.75rem;">Avg Trust Rating</small>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Active Model Accuracy -->
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-md-4 col-lg-2">
                 <div class="card shadow-sm border-0 rounded-4 bg-card h-100 p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon bg-info-subtle text-info">
                             <i class="bi bi-shield-check"></i>
                         </div>
                         <div>
-                            <h3 class="fw-extrabold mb-0 text-color">{{ accuracy }}%</h3>
-                            <small class="text-secondary fw-medium">Model Accuracy</small>
+                            <h4 class="fw-extrabold mb-0 text-color">{{ accuracy }}%</h4>
+                            <small class="text-secondary fw-semibold" style="font-size: 0.75rem;">Model Accuracy</small>
                         </div>
                     </div>
                 </div>
@@ -199,49 +229,96 @@
             </div>
         </div>
 
-        <!-- 3. Logs Table & History -->
-        <div class="row g-4">
-            <!-- Last Analyzed Logs -->
-            <div class="col-12">
-                <div class="card shadow border-0 rounded-4 bg-card">
+        <!-- 3. Logs Tables & History -->
+        <div class="row g-4 mb-5">
+            <!-- Left: Single Review Logs -->
+            <div class="col-lg-6">
+                <div class="card shadow border-0 rounded-4 bg-card h-100">
                     <div class="card-body p-4">
-                        <h5 class="fw-bold mb-4 text-secondary"><i class="bi bi-clock-history text-primary me-2"></i>Prediction Logs (Last 10 Analyzed)</h5>
+                        <h5 class="fw-bold mb-4 text-secondary"><i class="bi bi-clock-history text-primary me-2"></i>Single Review Logs (Last 5)</h5>
                         
                         <div class="table-responsive">
-                            <table class="table align-middle">
+                            <table class="table align-middle" style="font-size: 0.9rem;">
                                 <thead>
                                     <tr>
-                                        <th scope="col" style="width: 5%;">ID</th>
-                                        <th scope="col" style="width: 50%;">Review Content Snippet</th>
-                                        <th scope="col" style="width: 15%;">Verdict</th>
-                                        <th scope="col" style="width: 15%;">Confidence</th>
-                                        <th scope="col" style="width: 15%;">Timestamp</th>
+                                        <th scope="col" style="width: 10%;">ID</th>
+                                        <th scope="col" style="width: 50%;">Review Snippet</th>
+                                        <th scope="col" style="width: 20%;">Verdict</th>
+                                        <th scope="col" style="width: 20%;">Conf</th>
                                     </tr>
                                 </thead>
-                                <tbody id="historyTableBody">
-                                    {% for row in history %}
+                                <tbody>
+                                    {% for row in history[:5] %}
                                         <tr>
                                             <td><strong>#{{ row.id }}</strong></td>
                                             <td>
-                                                <a href="{{ url_for('result', prediction_id=row.id) }}" class="text-decoration-none text-color text-truncate d-inline-block" style="max-width: 450px;" title="View Full Report">
-                                                    {{ row.review_text[:75] }}{% if (row.review_text | length) > 75 %}...{% endif %}
+                                                <a href="{{ url_for('result', prediction_id=row.id) }}" class="text-decoration-none text-color text-truncate d-inline-block" style="max-width: 200px;" title="View Report">
+                                                    {{ row.review_text[:40] }}{% if (row.review_text | length) > 40 %}...{% endif %}
                                                 </a>
                                             </td>
                                             <td>
                                                 {% if row.prediction_label == 'Fake' %}
-                                                    <span class="badge bg-danger-subtle text-danger px-2.5 py-1.5 rounded-pill border border-danger-subtle">SUSPECTED FAKE</span>
+                                                    <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded-pill" style="font-size: 0.7rem;">FAKE</span>
                                                 {% else %}
-                                                    <span class="badge bg-success-subtle text-success px-2.5 py-1.5 rounded-pill border border-success-subtle">GENUINE</span>
+                                                    <span class="badge bg-success-subtle text-success px-2 py-1 rounded-pill" style="font-size: 0.7rem;">GENUINE</span>
                                                 {% endif %}
                                             </td>
                                             <td>{{ row.confidence }}%</td>
-                                            <td><small class="text-secondary">{{ row.created_at }}</small></td>
                                         </tr>
                                     {% else %}
                                         <tr>
-                                            <td colspan="5" class="text-center text-secondary py-5">
-                                                <i class="bi bi-folder-x fs-2 mb-2 d-block"></i>
-                                                No predictions have been recorded yet. Go to <a href="{{ url_for('index') }}">Home</a> to test!
+                                            <td colspan="4" class="text-center text-secondary py-4">
+                                                No single predictions recorded yet.
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Product URL Logs -->
+            <div class="col-lg-6">
+                <div class="card shadow border-0 rounded-4 bg-card h-100">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-4 text-secondary"><i class="bi bi-link-45deg text-primary me-2"></i>Product Link Logs (Last 5)</h5>
+                        
+                        <div class="table-responsive">
+                            <table class="table align-middle" style="font-size: 0.9rem;">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="width: 10%;">ID</th>
+                                        <th scope="col" style="width: 50%;">Product Title</th>
+                                        <th scope="col" style="width: 20%;">Trust Score</th>
+                                        <th scope="col" style="width: 20%;">Reviews</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in product_history %}
+                                        <tr>
+                                            <td><strong>#P{{ row.id }}</strong></td>
+                                            <td>
+                                                <a href="{{ url_for('product_result', analysis_id=row.id) }}" class="text-decoration-none text-color text-truncate d-inline-block" style="max-width: 200px;" title="View Product Report">
+                                                    {{ row.product_name }}
+                                                </a>
+                                            </td>
+                                            <td>
+                                                {% if row.trust_score >= 80.0 %}
+                                                    <span class="badge bg-success-subtle text-success px-2 py-1 rounded-pill" style="font-size: 0.7rem;">{{ row.trust_score }}%</span>
+                                                {% elif row.trust_score >= 50.0 %}
+                                                    <span class="badge bg-warning-subtle text-warning px-2 py-1 rounded-pill" style="font-size: 0.7rem;">{{ row.trust_score }}%</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded-pill" style="font-size: 0.7rem;">{{ row.trust_score }}%</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><span class="badge bg-secondary-subtle text-secondary py-1 px-2">{{ row.total_reviews }}</span></td>
+                                        </tr>
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-secondary py-4">
+                                                No product analyses logged yet.
                                             </td>
                                         </tr>
                                     {% endfor %}
