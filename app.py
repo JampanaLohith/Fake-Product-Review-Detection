@@ -418,6 +418,10 @@ def clear_history():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/report')
+def report():
+    return render_template('report.html')
+
 if __name__ == '__main__':
     # Initialize DB and print network access URLs
     import socket
