@@ -85,10 +85,13 @@
             <div class="card shadow-sm border-0 rounded-4 p-4 mb-4 bg-card">
                 <div class="row align-items-center g-4">
                     <div class="col-md-8">
-                        <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-2 mb-2">Product URL Analysis</span>
+                        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                            <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-1.5"><i class="bi bi-link-45deg me-1"></i> Live URL Analysis</span>
+                            <span class="badge bg-info-subtle text-info-emphasis fw-semibold px-3 py-1.5 border border-info-subtle"><i class="bi bi-shop me-1"></i> Platform: {{ analysis.platform_name or 'E-Commerce' }}</span>
+                        </div>
                         <h2 class="fw-bold mb-2 text-color">{{ analysis.product_name }}</h2>
                         <a href="{{ analysis.product_url }}" target="_blank" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1 overflow-hidden text-truncate w-100" style="max-width: 600px;">
-                            <i class="bi bi-link-45deg fs-5 flex-shrink-0"></i>
+                            <i class="bi bi-globe fs-5 flex-shrink-0 me-1"></i>
                             <span class="text-truncate">{{ analysis.product_url }}</span>
                             <i class="bi bi-box-arrow-up-right small ms-1 flex-shrink-0"></i>
                         </a>
@@ -111,13 +114,13 @@
                 <div class="col-lg-4 col-md-6">
                     <div class="card shadow border-0 rounded-4 h-100 bg-card">
                         <div class="card-body p-4 text-center d-flex flex-column justify-content-center align-items-center">
-                            <h5 class="fw-bold mb-3 text-secondary">Trust Rating Score</h5>
+                            <h5 class="fw-bold mb-3 text-secondary">Authenticity Score</h5>
                             
                             <h1 class="fw-extrabold display-3 mb-1 {% if analysis.trust_score >= 80.0 %}text-success{% elif analysis.trust_score >= 50.0 %}text-warning{% else %}text-danger{% endif %}">
                                 {{ analysis.trust_score }}%
                             </h1>
                             <p class="text-secondary small px-3 mb-0">
-                                This score represents the percentage of reviews determined to be **Genuine** by the ML model.
+                                Overall authenticity score based on ML classification of actual fetched reviews.
                             </p>
                         </div>
                     </div>
@@ -127,21 +130,31 @@
                 <div class="col-lg-4 col-md-6">
                     <div class="card shadow border-0 rounded-4 h-100 bg-card">
                         <div class="card-body p-4">
-                            <h5 class="fw-bold mb-4 text-secondary">Reviews Breakdown</h5>
+                            <h5 class="fw-bold mb-3 text-secondary">Reviews Breakdown</h5>
                             
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2.5 mb-2.5">
-                                <span class="fw-semibold text-color">Total Analyzed</span>
-                                <span class="badge bg-secondary-subtle text-secondary fs-6 px-3 py-1.5 fw-medium">{{ analysis.total_reviews }}</span>
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2 small">
+                                <span class="fw-semibold text-color">Actual Reviews Fetched</span>
+                                <span class="badge bg-primary-subtle text-primary px-2.5 py-1">{{ analysis.total_reviews }}</span>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2 small">
+                                <span class="fw-semibold text-color">Reviews Analyzed</span>
+                                <span class="badge bg-secondary-subtle text-secondary px-2.5 py-1">{{ analysis.total_reviews }}</span>
                             </div>
                             
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2.5 mb-2.5">
-                                <span class="fw-semibold text-success"><i class="bi bi-check-circle me-1"></i> Genuine Reviews</span>
-                                <span class="badge bg-success-subtle text-success fs-6 px-3 py-1.5 fw-medium">{{ analysis.genuine_count }}</span>
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2 small">
+                                <span class="fw-semibold text-success"><i class="bi bi-check-circle me-1"></i> Likely Genuine</span>
+                                <span class="badge bg-success-subtle text-success px-2.5 py-1">{{ analysis.genuine_count }}</span>
                             </div>
                             
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fw-semibold text-danger"><i class="bi bi-x-octagon me-1"></i> Fake / Spam Reviews</span>
-                                <span class="badge bg-danger-subtle text-danger fs-6 px-3 py-1.5 fw-medium">{{ analysis.fake_count }}</span>
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2 small">
+                                <span class="fw-semibold text-danger"><i class="bi bi-x-octagon me-1"></i> Potentially Fake</span>
+                                <span class="badge bg-danger-subtle text-danger px-2.5 py-1">{{ analysis.fake_count }}</span>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center small">
+                                <span class="fw-semibold text-danger me-1">Fake Percentage</span>
+                                <span class="badge bg-danger text-white px-2.5 py-1">{{ fake_pct }}%</span>
                             </div>
                         </div>
                     </div>
@@ -163,7 +176,7 @@
             <!-- List of Analyzed Reviews -->
             <div class="card shadow border-0 rounded-4 bg-card mb-5">
                 <div class="card-header border-bottom py-3 px-4">
-                    <h5 class="fw-bold mb-0 text-secondary"><i class="bi bi-list-stars text-primary me-2"></i>Analyzed Reviews Audit List</h5>
+                    <h5 class="fw-bold mb-0 text-secondary"><i class="bi bi-list-stars text-primary me-2"></i>Live Scraped Reviews Audit List</h5>
                 </div>
                 <div class="card-body p-4">
                     <!-- Bootstrap Filter Tabs -->
@@ -192,7 +205,16 @@
                                 {% for r in reviews %}
                                     <div class="review-item p-3 border rounded-3 mb-3 bg-light-subtle d-flex flex-column gap-2">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                            <span class="fw-semibold text-secondary">Review #{{ loop.index }}</span>
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span class="fw-semibold text-secondary">Review #{{ loop.index }}</span>
+                                                <span class="badge bg-secondary-subtle text-secondary py-1 px-2 small"><i class="bi bi-box-arrow-in-right me-1"></i> {{ r.source or 'Live Scraped' }}</span>
+                                                {% if r.rating %}
+                                                    <span class="badge bg-warning-subtle text-dark py-1 px-2 small"><i class="bi bi-star-fill text-warning me-1"></i> {{ r.rating }} Stars</span>
+                                                {% endif %}
+                                                {% if r.verified %}
+                                                    <span class="badge bg-success-subtle text-success py-1 px-2 small"><i class="bi bi-patch-check me-1"></i> Verified Buyer</span>
+                                                {% endif %}
+                                            </div>
                                             <div class="d-flex align-items-center gap-2">
                                                 {% if r.prediction_label == 'Fake' %}
                                                     <span class="badge bg-danger-subtle text-danger px-2.5 py-1.5 rounded-pill border border-danger-subtle">FLAGGED AS FAKE</span>
@@ -204,6 +226,11 @@
                                         </div>
                                         <p class="mb-0 review-quote text-color">"{{ r.review_text }}"</p>
                                     </div>
+                                {% else %}
+                                    <div class="text-center text-secondary py-5">
+                                        <i class="bi bi-exclamation-circle fs-2 text-warning mb-2 d-block"></i>
+                                        Unable to fetch reviews from this product page.
+                                    </div>
                                 {% endfor %}
                             </div>
                         </div>
@@ -214,7 +241,13 @@
                                 {% for r in fake_reviews %}
                                     <div class="review-item p-3 border border-danger-subtle rounded-3 mb-3 bg-danger-subtle bg-opacity-5 d-flex flex-column gap-2">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                            <span class="fw-semibold text-secondary">Review #{{ loop.index }}</span>
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span class="fw-semibold text-secondary">Review #{{ loop.index }}</span>
+                                                <span class="badge bg-secondary-subtle text-secondary py-1 px-2 small"><i class="bi bi-box-arrow-in-right me-1"></i> {{ r.source or 'Live Scraped' }}</span>
+                                                {% if r.rating %}
+                                                    <span class="badge bg-warning-subtle text-dark py-1 px-2 small"><i class="bi bi-star-fill text-warning me-1"></i> {{ r.rating }} Stars</span>
+                                                {% endif %}
+                                            </div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <span class="badge bg-danger-subtle text-danger px-2.5 py-1.5 rounded-pill border border-danger-subtle">FLAGGED AS FAKE</span>
                                                 <span class="badge bg-secondary-subtle text-secondary py-1 px-2">{{ r.confidence }}% conf</span>
@@ -225,7 +258,7 @@
                                 {% else %}
                                     <div class="text-center text-secondary py-5">
                                         <i class="bi bi-shield-check fs-2 text-success mb-2 d-block"></i>
-                                        No fake reviews detected. All product reviews are classified as Genuine!
+                                        No fake reviews detected. All analyzed reviews are classified as Genuine!
                                     </div>
                                 {% endfor %}
                             </div>
@@ -237,7 +270,13 @@
                                 {% for r in genuine_reviews %}
                                     <div class="review-item p-3 border border-success-subtle rounded-3 mb-3 bg-success-subtle bg-opacity-5 d-flex flex-column gap-2">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                            <span class="fw-semibold text-secondary">Review #{{ loop.index }}</span>
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span class="fw-semibold text-secondary">Review #{{ loop.index }}</span>
+                                                <span class="badge bg-secondary-subtle text-secondary py-1 px-2 small"><i class="bi bi-box-arrow-in-right me-1"></i> {{ r.source or 'Live Scraped' }}</span>
+                                                {% if r.rating %}
+                                                    <span class="badge bg-warning-subtle text-dark py-1 px-2 small"><i class="bi bi-star-fill text-warning me-1"></i> {{ r.rating }} Stars</span>
+                                                {% endif %}
+                                            </div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <span class="badge bg-success-subtle text-success px-2.5 py-1.5 rounded-pill border border-success-subtle">VERIFIED GENUINE</span>
                                                 <span class="badge bg-secondary-subtle text-secondary py-1 px-2">{{ r.confidence }}% conf</span>
@@ -248,7 +287,7 @@
                                 {% else %}
                                     <div class="text-center text-secondary py-5">
                                         <i class="bi bi-exclamation-triangle fs-2 text-danger mb-2 d-block"></i>
-                                        No genuine reviews detected. All product reviews are classified as Fake/Spam!
+                                        No genuine reviews detected. All analyzed reviews are classified as Fake/Spam!
                                     </div>
                                 {% endfor %}
                             </div>

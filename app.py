@@ -216,20 +216,20 @@ def predict_product():
         return redirect(url_for('index'))
 
     try:
-        # Extract product name and reviews list using custom helpers in model.py
         product_name = extract_product_name(product_url)
-        reviews = fetch_product_reviews(product_url, product_name)
+        reviews, platform_name, error_msg = fetch_product_reviews(product_url, product_name)
         
-        if not reviews:
-            flash("Unable to extract reviews from this link. Make sure it contains text reviews.", "warning")
+        # Strict Rule: No synthetic fallback reviews when 0 reviews extracted
+        if not reviews or len(reviews) == 0:
+            flash(error_msg or f"Unable to fetch reviews from this {platform_name} product page.", "warning")
             return redirect(url_for('index'))
             
         fake_count = 0
         genuine_count = 0
         predictions_batch = []
         
-        # Batch predict
-        for r_text in reviews:
+        for r_item in reviews:
+            r_text = r_item['review_text']
             cleaned_text = preprocess_text(r_text)
             dense_features = extract_dense_features(r_text)
             dense_scaled = scaler.transform(dense_features.reshape(1, -1))
@@ -252,27 +252,30 @@ def predict_product():
             predictions_batch.append({
                 "review_text": r_text,
                 "prediction_label": prediction_label,
-                "confidence": confidence_pct
+                "confidence": confidence_pct,
+                "rating": r_item.get("rating"),
+                "author": r_item.get("author"),
+                "date": r_item.get("date"),
+                "verified": 1 if r_item.get("verified") else (0 if r_item.get("verified") is False else None),
+                "source": r_item.get("source", f"Live Scraped - {platform_name}")
             })
             
         total_reviews = len(reviews)
         trust_score = round((genuine_count / total_reviews) * 100, 2)
         
-        # Save Product Analysis Metadata
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO product_analyses (product_name, product_url, total_reviews, fake_count, genuine_count, trust_score)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (product_name, product_url, total_reviews, fake_count, genuine_count, trust_score))
+            INSERT INTO product_analyses (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score))
         analysis_id = cursor.lastrowid
         
-        # Save batch reviews linked to this analysis
         for pred in predictions_batch:
             cursor.execute('''
-                INSERT INTO product_reviews (analysis_id, review_text, prediction_label, confidence)
-                VALUES (?, ?, ?, ?)
-            ''', (analysis_id, pred["review_text"], pred["prediction_label"], pred["confidence"]))
+                INSERT INTO product_reviews (analysis_id, review_text, prediction_label, confidence, rating, author, date, verified, source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (analysis_id, pred["review_text"], pred["prediction_label"], pred["confidence"], pred["rating"], pred["author"], pred["date"], pred["verified"], pred["source"]))
             
         conn.commit()
         conn.close()
@@ -280,7 +283,7 @@ def predict_product():
         return redirect(url_for('product_result', analysis_id=analysis_id))
         
     except Exception as e:
-        flash(f"An error occurred during batch prediction: {e}", "danger")
+        flash(f"An error occurred during product review analysis: {e}", "danger")
         return redirect(url_for('index'))
 
 @app.route('/product_result/<int:analysis_id>')
@@ -296,16 +299,19 @@ def product_result(analysis_id):
     reviews = conn.execute('SELECT * FROM product_reviews WHERE analysis_id = ?', (analysis_id,)).fetchall()
     conn.close()
     
-    # Split reviews for display categorization
     fake_reviews = [r for r in reviews if r['prediction_label'] == 'Fake']
     genuine_reviews = [r for r in reviews if r['prediction_label'] == 'Genuine']
+    
+    total = analysis['total_reviews']
+    fake_pct = round((analysis['fake_count'] / total) * 100, 2) if total > 0 else 0.0
     
     return render_template(
         'product_result.html',
         analysis=analysis,
         reviews=reviews,
         fake_reviews=fake_reviews,
-        genuine_reviews=genuine_reviews
+        genuine_reviews=genuine_reviews,
+        fake_pct=fake_pct
     )
 
 @app.route('/dashboard')

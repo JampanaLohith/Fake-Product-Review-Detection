@@ -187,10 +187,30 @@ def explain_prediction(text, lr_model, vectorizer, scaler):
     
     return explanation
 
+def detect_platform(url):
+    """
+    Identifies the e-commerce platform from the product URL.
+    """
+    if not isinstance(url, str):
+        return "Unknown Platform"
+    
+    url_lower = url.lower()
+    if 'flipkart.com' in url_lower:
+        return "Flipkart"
+    elif 'amazon.' in url_lower or 'amzn.' in url_lower:
+        return "Amazon"
+    elif 'myntra.com' in url_lower:
+        return "Myntra"
+    elif 'meesho.com' in url_lower:
+        return "Meesho"
+    else:
+        return "Generic E-Commerce"
+
+
 def extract_product_name(url):
     """
-    Parses an e-commerce URL (e.g. Amazon or Flipkart) and extracts
-    a clean, human-readable product title.
+    Parses an e-commerce URL (Amazon, Flipkart, Myntra, Meesho, or Generic)
+    and extracts a clean, human-readable product title.
     """
     if not isinstance(url, str):
         return "E-Commerce Product"
@@ -200,18 +220,28 @@ def extract_product_name(url):
     # 1. Amazon pattern: domain.com/Product-Name/dp/B0...
     amazon_match = re.search(r'amazon\.[a-z\.]+/([^/]+)/dp/', url, re.IGNORECASE)
     if amazon_match:
-        name = amazon_match.group(1)
-        name = name.replace('-', ' ').replace('_', ' ')
+        name = amazon_match.group(1).replace('-', ' ').replace('_', ' ')
         return name.title()
         
     # 2. Flipkart pattern: flipkart.com/product-name/p/itm...
     flipkart_match = re.search(r'flipkart\.com/([^/]+)/p/', url, re.IGNORECASE)
     if flipkart_match:
-        name = flipkart_match.group(1)
-        name = name.replace('-', ' ').replace('_', ' ')
+        name = flipkart_match.group(1).replace('-', ' ').replace('_', ' ')
+        return name.title()
+
+    # 3. Myntra pattern: myntra.com/category/brand/product-name/id/buy
+    myntra_match = re.search(r'myntra\.com/(?:[^/]+/)*([^/]+)/\d+/buy', url, re.IGNORECASE)
+    if myntra_match:
+        name = myntra_match.group(1).replace('-', ' ').replace('_', ' ')
+        return name.title()
+
+    # 4. Meesho pattern: meesho.com/product-name/p/id
+    meesho_match = re.search(r'meesho\.com/([^/]+)/p/', url, re.IGNORECASE)
+    if meesho_match:
+        name = meesho_match.group(1).replace('-', ' ').replace('_', ' ')
         return name.title()
         
-    # 3. General URL fallback: parse last path segment
+    # 5. General URL fallback: parse last meaningful path segment
     try:
         from urllib.parse import urlparse
         parsed = urlparse(url)
@@ -228,24 +258,21 @@ def extract_product_name(url):
         
     return "E-Commerce Product"
 
+
 def _build_flipkart_reviews_url(url):
     """
     Converts a Flipkart product page URL into its reviews endpoint URL.
-    Flipkart review pages follow the pattern /product-name/product-reviews/ITEM_ID
     """
     try:
         from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
         parsed = urlparse(url)
 
-        # Replace /p/ with /product-reviews/ in path
         path = parsed.path
         if '/p/' in path:
             path = path.replace('/p/', '/product-reviews/')
         elif '/product-reviews/' not in path:
-            # Append /product-reviews to the last path segment
             path = path.rstrip('/') + '/product-reviews/'
 
-        # Build clean URL — keep only pid query param if present
         qs = parse_qs(parsed.query)
         new_qs = {}
         if 'pid' in qs:
@@ -254,22 +281,19 @@ def _build_flipkart_reviews_url(url):
             new_qs['lid'] = qs['lid'][0]
 
         new_query = urlencode(new_qs)
-        reviews_url = urlunparse((parsed.scheme, parsed.netloc, path, '', new_query, ''))
-        return reviews_url
+        return urlunparse((parsed.scheme, parsed.netloc, path, '', new_query, ''))
     except Exception:
         return url
 
 
-def _scrape_flipkart_reviews(url, max_pages=3):
+def _scrape_flipkart_reviews(url, max_pages=2):
     """
-    Scrapes real customer reviews from a Flipkart product page.
-    Uses cloudscraper to bypass anti-bot challenges when available.
-    Returns a list of review text strings, or empty list if blocked.
+    Scrapes real customer reviews from Flipkart.
+    Returns structured list of review dictionaries.
     """
     try:
         import requests
         from bs4 import BeautifulSoup
-        import time
 
         try:
             import cloudscraper
@@ -278,143 +302,274 @@ def _scrape_flipkart_reviews(url, max_pages=3):
             session = requests.Session()
 
         reviews_url = _build_flipkart_reviews_url(url)
-
         headers = {
-            'User-Agent': (
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                'AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/124.0.0.0 Safari/537.36'
-            ),
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
             'Accept-Language': 'en-IN,en;q=0.9',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Referer': 'https://www.flipkart.com/',
         }
 
-        scraped_reviews = []
-
+        reviews = []
         for page in range(1, max_pages + 1):
             page_url = reviews_url
             if page > 1:
-                separator = '&' if '?' in reviews_url else '?'
-                page_url = f"{reviews_url}{separator}page={page}"
+                sep = '&' if '?' in reviews_url else '?'
+                page_url = f"{reviews_url}{sep}page={page}"
 
-            try:
-                resp = session.get(page_url, headers=headers, timeout=8)
-                if resp.status_code != 200:
-                    break
-
-                soup = BeautifulSoup(resp.text, 'html.parser')
-
-                # Search all review text div containers
-                review_containers = (
-                    soup.find_all('div', class_='ZmyHeo') or
-                    soup.find_all('div', class_='t-ZTKy') or
-                    soup.find_all('div', class_='_27M-gpx') or
-                    soup.find_all('div', {'class': lambda c: c and 'review' in c.lower()})
-                )
-
-                for container in review_containers:
-                    text_blocks = container.find_all(['p', 'div', 'span'])
-                    for block in text_blocks:
-                        text = block.get_text(separator=' ', strip=True)
-                        if 25 < len(text) < 2000:
-                            lower = text.lower()
-                            skip_words = ['read more', 'helpful', 'report', 'reply', 'verified purchase',
-                                          'certified buyer', 'images', 'questions', 'rate product']
-                            if not any(s in lower for s in skip_words):
-                                scraped_reviews.append(text)
-
-                if page < max_pages:
-                    time.sleep(1.0)
-
-            except Exception:
+            resp = session.get(page_url, headers=headers, timeout=8)
+            if resp.status_code != 200:
                 break
 
-        # Deduplicate preserving order
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            # Target review containers
+            containers = (
+                soup.find_all('div', class_='ZmyHeo') or
+                soup.find_all('div', class_='t-ZTKy') or
+                soup.find_all('div', class_='_27M-gpx') or
+                soup.find_all('div', {'class': lambda c: c and 'review' in c.lower()})
+            )
+
+            for c in containers:
+                text = c.get_text(separator=' ', strip=True)
+                if 20 < len(text) < 2000:
+                    lower = text.lower()
+                    skip_words = ['read more', 'helpful', 'report', 'reply', 'certified buyer']
+                    if not any(s in lower for s in skip_words):
+                        # Extract parent card if available for author/rating
+                        parent = c.find_parent('div', class_=lambda cl: cl and ('cPHJh8' in cl or 'col' in cl or 'row' in cl))
+                        rating = None
+                        author = None
+                        if parent:
+                            rating_el = parent.find('div', class_=lambda cl: cl and 'XD0979' in cl) or parent.find('div', class_=lambda cl: cl and 'rating' in cl.lower())
+                            if rating_el:
+                                try:
+                                    rating = float(re.findall(r'\d+(?:\.\d+)?', rating_el.get_text())[0])
+                                except Exception:
+                                    pass
+                            author_el = parent.find('p', class_=lambda cl: cl and '_2NsA9' in cl) or parent.find('p', class_=lambda cl: cl and 'author' in cl.lower())
+                            if author_el:
+                                author = author_el.get_text(strip=True)
+
+                        reviews.append({
+                            "review_text": text,
+                            "rating": rating,
+                            "author": author,
+                            "date": None,
+                            "verified": True if 'certified buyer' in c.find_parent().get_text().lower() else None,
+                            "source": "Live Scraped - Flipkart"
+                        })
+        
+        # Deduplicate
         seen = set()
-        unique_reviews = []
-        for r in scraped_reviews:
-            key = r[:80]
+        unique = []
+        for r in reviews:
+            key = r['review_text'][:80]
             if key not in seen:
                 seen.add(key)
-                unique_reviews.append(r)
+                unique.append(r)
+        return unique
+    except Exception:
+        return []
 
-        return unique_reviews
 
+def _scrape_amazon_reviews(url):
+    """
+    Scrapes real customer reviews from Amazon product pages.
+    """
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        try:
+            import cloudscraper
+            session = cloudscraper.create_scraper()
+        except ImportError:
+            session = requests.Session()
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+
+        resp = session.get(url, headers=headers, timeout=8)
+        if resp.status_code != 200:
+            return []
+
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        review_cards = soup.find_all('div', {'data-hook': 'review'}) or soup.find_all('div', class_=lambda c: c and 'review' in c.lower())
+
+        reviews = []
+        for card in review_cards:
+            body = card.find('span', {'data-hook': 'review-body'}) or card.find('div', class_=lambda c: c and 'review-text' in c.lower())
+            if body:
+                text = body.get_text(separator=' ', strip=True)
+                if len(text) > 15:
+                    rating_el = card.find('i', {'data-hook': 'review-star-rating'}) or card.find('i', class_=lambda c: c and 'star' in c.lower())
+                    rating = None
+                    if rating_el:
+                        try:
+                            rating = float(re.findall(r'\d+(?:\.\d+)?', rating_el.get_text())[0])
+                        except Exception:
+                            pass
+
+                    author_el = card.find('span', class_='a-profile-name')
+                    author = author_el.get_text(strip=True) if author_el else None
+
+                    date_el = card.find('span', {'data-hook': 'review-date'})
+                    date_str = date_el.get_text(strip=True) if date_el else None
+
+                    verified_el = card.find('span', {'data-hook': 'avp-badge'})
+                    verified = True if verified_el else None
+
+                    reviews.append({
+                        "review_text": text,
+                        "rating": rating,
+                        "author": author,
+                        "date": date_str,
+                        "verified": verified,
+                        "source": "Live Scraped - Amazon"
+                    })
+
+        return reviews
+    except Exception:
+        return []
+
+
+def _scrape_myntra_reviews(url):
+    """
+    Scrapes real customer reviews from Myntra.
+    """
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        }
+        resp = requests.get(url, headers=headers, timeout=8)
+        if resp.status_code != 200:
+            return []
+
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        containers = soup.find_all('div', class_=lambda c: c and 'user-review' in c.lower())
+
+        reviews = []
+        for c in containers:
+            text = c.get_text(separator=' ', strip=True)
+            if len(text) > 15:
+                reviews.append({
+                    "review_text": text,
+                    "rating": None,
+                    "author": None,
+                    "date": None,
+                    "verified": True,
+                    "source": "Live Scraped - Myntra"
+                })
+        return reviews
+    except Exception:
+        return []
+
+
+def _scrape_meesho_reviews(url):
+    """
+    Scrapes real customer reviews from Meesho.
+    """
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        }
+        resp = requests.get(url, headers=headers, timeout=8)
+        if resp.status_code != 200:
+            return []
+
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        containers = soup.find_all('div', class_=lambda c: c and 'comment' in c.lower())
+
+        reviews = []
+        for c in containers:
+            text = c.get_text(separator=' ', strip=True)
+            if len(text) > 15:
+                reviews.append({
+                    "review_text": text,
+                    "rating": None,
+                    "author": None,
+                    "date": None,
+                    "verified": True,
+                    "source": "Live Scraped - Meesho"
+                })
+        return reviews
+    except Exception:
+        return []
+
+
+def _scrape_generic_reviews(url):
+    """
+    Generic scraper for unsupported or general e-commerce websites.
+    Identifies review structures using semantic CSS patterns.
+    """
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        }
+        resp = requests.get(url, headers=headers, timeout=8)
+        if resp.status_code != 200:
+            return []
+
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        containers = soup.find_all(['div', 'section', 'li'], class_=lambda c: c and any(w in c.lower() for w in ['review', 'comment', 'feedback', 'testimonial']))
+
+        reviews = []
+        for c in containers:
+            text = c.get_text(separator=' ', strip=True)
+            if 20 < len(text) < 1500:
+                reviews.append({
+                    "review_text": text,
+                    "rating": None,
+                    "author": None,
+                    "date": None,
+                    "verified": None,
+                    "source": "Live Scraped - Generic Web Page"
+                })
+        return reviews
     except Exception:
         return []
 
 
 def fetch_product_reviews(url, product_name):
     """
-    Main entry point for fetching product reviews.
+    Main entry point for fetching real product reviews.
     
-    Strategy:
-    1. Try live-scraping actual reviews from the Flipkart URL using cloudscraper.
-    2. If scraping returns sufficient results (>= 5 reviews), use them directly.
-    3. Otherwise, generate a diverse, randomized batch of product-specific reviews 
-       tailored to product_name (ensuring offline stability & unique reviews on every run).
+    STRICT ACCURACY GUARANTEE:
+    - Only returns reviews actually scraped from the given product URL.
+    - NEVER generates or substitutes dataset/synthetic fallback reviews.
+    
+    Returns:
+        tuple: (reviews_list, platform_name, error_message)
     """
-    import random
+    platform = detect_platform(url)
 
-    # Step 1: Try live scraping
-    live_reviews = []
-    is_flipkart = 'flipkart.com' in url.lower()
+    if platform == "Flipkart":
+        reviews = _scrape_flipkart_reviews(url)
+    elif platform == "Amazon":
+        reviews = _scrape_amazon_reviews(url)
+    elif platform == "Myntra":
+        reviews = _scrape_myntra_reviews(url)
+    elif platform == "Meesho":
+        reviews = _scrape_meesho_reviews(url)
+    else:
+        reviews = _scrape_generic_reviews(url)
 
-    if is_flipkart:
-        live_reviews = _scrape_flipkart_reviews(url, max_pages=3)
+    if reviews and len(reviews) > 0:
+        return reviews, platform, None
 
-    if len(live_reviews) >= 5:
-        random.shuffle(live_reviews)
-        return live_reviews
+    # Honest failure handling: Return 0 reviews with explanatory message
+    error_msg = (
+        f"Unable to fetch reviews from this {platform} product page. "
+        "The website may block automated scrapers, require login authentication, "
+        "or contain no publicly accessible customer reviews."
+    )
+    return [], platform, error_msg
 
-    # Step 2: Dynamic product-specific review generation
-    reviews = list(live_reviews)
-
-    # Varied, dynamic review templates customized to product_name
-    gen_pos_templates = [
-        f"I bought this {product_name} last week on sale. The build quality is impressionable and performance is very smooth for daily tasks. Battery duration is good too.",
-        f"Honestly, {product_name} is worth every rupee spent. The packaging was neat, and delivery was completed before estimated time.",
-        f"Decent choice if you are looking for a reliable {product_name}. Minor drawback on charging speed, but overall usability is solid.",
-        f"Extremely satisfied with this {product_name}. The display and overall finish feel premium in hand. Highly recommended for regular use.",
-        f"Bought this {product_name} for my daily work. Has been working without any issues for 2 weeks now. Value for money product.",
-        f"The {product_name} arrived safely. The box was sealed properly, and all accessories were included in working condition.",
-        f"Was hesitant before purchasing {product_name} online, but it turned out to be a great decision. Very responsive and durable.",
-        f"Solid product performance from {product_name}. Camera/build specs match what was described on the product page.",
-    ]
-
-    gen_neg_templates = [
-        f"The {product_name} works okay, but the outer frame has slight finishing defects. Expected better quality control.",
-        f"Average experience with {product_name}. It handles basic tasks fine, but lags under heavy workload or gaming.",
-        f"Disappointed with battery life on {product_name}. Need to charge it multiple times a day under normal usage.",
-        f"The {product_name} arrived slightly late and the packaging box was dented. Product itself functions fine though.",
-    ]
-
-    fake_pos_templates = [
-        f"!!! BEST {product_name} IN THE WORLD !!! UNBELIEVABLE QUALITY !!! MUST BUY NOW !!! YOU WILL NOT REGRET IT !!!",
-        f"OMG!!! Absolute perfection! This {product_name} is the best product I have ever bought in my entire life! 10/10 STARS!!!",
-        f"!!! OUTSTANDING {product_name} !!! Super fast delivery, insane performance! Buy immediately, thank me later!!!",
-        f"ABSOLUTELY PERFECT!!! 100% genuine and mindblowing quality {product_name}!!! BUY IT RIGHT NOW WOW WOW WOW!!!",
-        f"WOW! DO NOT HESITATE! Grab this {product_name} before stock runs out! PERFECT PERFECT PERFECT!!!",
-    ]
-
-    fake_neg_templates = [
-        f"!!! COMPLETE SCAM !!! DO NOT BUY THIS {product_name} !!! TOTAL WASTE OF MONEY AND TIME !!!",
-        f"!!! WORST {product_name} EVER !!! BROKE IN ONE SECOND !!! CHEAP TRASH !!! RUN AWAY FROM THIS SELLER !!!",
-        f"FAKE PRODUCT!!! Scammer seller sent defective {product_name}. Do not trust positive reviews here!!! TOTAL GARBAGE!!!",
-        f"!!! WARNING !!! This {product_name} stopped working immediately! REFUND MY MONEY NOW YOU FRAUD SELLER!!!",
-        f"TERRIBLE SERVICE!!! Useless product and seller refused to accept return. ZERO STARS!!!",
-    ]
-
-    # Combine and shuffle
-    sample_gen_pos = random.sample(gen_pos_templates, min(len(gen_pos_templates), 6))
-    sample_gen_neg = random.sample(gen_neg_templates, min(len(gen_neg_templates), 3))
-    sample_fake_pos = random.sample(fake_pos_templates, min(len(fake_pos_templates), 4))
-    sample_fake_neg = random.sample(fake_neg_templates, min(len(fake_neg_templates), 4))
-
-    for r in sample_gen_pos + sample_gen_neg + sample_fake_pos + sample_fake_neg:
-        reviews.append(r)
-
-    random.shuffle(reviews)
-    return reviews
 
