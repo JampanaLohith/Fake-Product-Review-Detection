@@ -7,7 +7,7 @@ import scipy.sparse
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 
 # Import our helper functions
-from model import preprocess_text, extract_dense_features, explain_prediction, extract_product_name, fetch_product_reviews
+from model import preprocess_text, extract_dense_features, explain_prediction, extract_product_name, fetch_product_reviews, detect_platform
 
 app = Flask(__name__)
 app.secret_key = "fake_review_secret_key_for_flash"
@@ -39,6 +39,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             product_name TEXT NOT NULL,
             product_url TEXT NOT NULL,
+            platform_name TEXT DEFAULT 'E-Commerce',
             total_reviews INTEGER NOT NULL,
             fake_count INTEGER NOT NULL,
             genuine_count INTEGER NOT NULL,
@@ -53,11 +54,35 @@ def init_db():
             review_text TEXT NOT NULL,
             prediction_label TEXT NOT NULL,
             confidence REAL NOT NULL,
+            rating REAL,
+            author TEXT,
+            date TEXT,
+            verified INTEGER DEFAULT 0,
+            source TEXT,
             FOREIGN KEY (analysis_id) REFERENCES product_analyses(id) ON DELETE CASCADE
         )
     ''')
+    # Schema migration: add columns that may be missing in older databases
+    _migrate_db(conn)
     conn.commit()
     conn.close()
+
+def _migrate_db(conn):
+    """Adds any missing columns to existing tables without data loss."""
+    migrations = [
+        ("product_analyses", "platform_name", "TEXT DEFAULT 'E-Commerce'"),
+        ("product_reviews",  "rating",        "REAL"),
+        ("product_reviews",  "author",        "TEXT"),
+        ("product_reviews",  "date",          "TEXT"),
+        ("product_reviews",  "verified",      "INTEGER DEFAULT 0"),
+        ("product_reviews",  "source",        "TEXT"),
+    ]
+    for table, column, col_def in migrations:
+        try:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
+        except Exception:
+            pass  # Column already exists — safe to ignore
+
 
 # Initialize SQLite database
 init_db()
@@ -427,6 +452,57 @@ def clear_history():
 @app.route('/report')
 def report():
     return render_template('report.html')
+
+@app.route('/api/health')
+def health():
+    """Health-check endpoint for Render and monitoring tools."""
+    return jsonify({
+        "status": "ok",
+        "service": "VeriTrust AI – Fake Review Detection",
+        "models_loaded": models_loaded,
+        "version": "2.0"
+    })
+
+@app.route('/api/analyze', methods=['POST'])
+def api_analyze():
+    """
+    JSON API endpoint: accepts { "review": "..." } and returns prediction.
+    Useful for integration testing and interview demonstrations.
+    """
+    global model, vectorizer, scaler, models_loaded
+    if not models_loaded:
+        models_loaded = load_ml_models()
+        if not models_loaded:
+            return jsonify({"error": "ML models not loaded. Run train_model.py first."}), 503
+
+    data = request.get_json(force=True, silent=True)
+    if not data or 'review' not in data:
+        return jsonify({"error": "Provide JSON body: {\"review\": \"<text>\"}"}), 400
+
+    review_text = str(data['review']).strip()
+    if len(review_text) < 15:
+        return jsonify({"error": "Review text is too short (minimum 15 characters)."}), 400
+
+    try:
+        cleaned_text = preprocess_text(review_text)
+        dense_features = extract_dense_features(review_text)
+        dense_scaled = scaler.transform(dense_features.reshape(1, -1))
+        tfidf_feat = vectorizer.transform([cleaned_text])
+        X_combined = scipy.sparse.hstack([tfidf_feat, dense_scaled])
+        prob = model.predict_proba(X_combined)[0]
+        prob_genuine = float(prob[0])
+        prob_fake = float(prob[1])
+        prediction_label = "Fake" if prob_fake >= 0.50 else "Genuine"
+        confidence = prob_fake if prediction_label == "Fake" else prob_genuine
+        return jsonify({
+            "prediction": prediction_label,
+            "confidence_pct": round(confidence * 100, 2),
+            "prob_fake": round(prob_fake, 4),
+            "prob_genuine": round(prob_genuine, 4),
+            "disclaimer": "ML predictions are based on patterns learned from training data and are not absolute proof of review authenticity."
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     # Initialize DB and print network access URLs
