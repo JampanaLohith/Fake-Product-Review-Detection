@@ -228,64 +228,193 @@ def extract_product_name(url):
         
     return "E-Commerce Product"
 
+def _build_flipkart_reviews_url(url):
+    """
+    Converts a Flipkart product page URL into its reviews endpoint URL.
+    Flipkart review pages follow the pattern /product-name/product-reviews/ITEM_ID
+    """
+    try:
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+        parsed = urlparse(url)
+
+        # Replace /p/ with /product-reviews/ in path
+        path = parsed.path
+        if '/p/' in path:
+            path = path.replace('/p/', '/product-reviews/')
+        elif '/product-reviews/' not in path:
+            # Append /product-reviews to the last path segment
+            path = path.rstrip('/') + '/product-reviews/'
+
+        # Build clean URL — keep only pid query param if present
+        qs = parse_qs(parsed.query)
+        new_qs = {}
+        if 'pid' in qs:
+            new_qs['pid'] = qs['pid'][0]
+        if 'lid' in qs:
+            new_qs['lid'] = qs['lid'][0]
+
+        new_query = urlencode(new_qs)
+        reviews_url = urlunparse((parsed.scheme, parsed.netloc, path, '', new_query, ''))
+        return reviews_url
+    except Exception:
+        return url
+
+
+def _scrape_flipkart_reviews(url, max_pages=3):
+    """
+    Scrapes real customer reviews from a Flipkart product page.
+    Uses cloudscraper to bypass anti-bot challenges when available.
+    Returns a list of review text strings, or empty list if blocked.
+    """
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        import time
+
+        try:
+            import cloudscraper
+            session = cloudscraper.create_scraper()
+        except ImportError:
+            session = requests.Session()
+
+        reviews_url = _build_flipkart_reviews_url(url)
+
+        headers = {
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/124.0.0.0 Safari/537.36'
+            ),
+            'Accept-Language': 'en-IN,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Referer': 'https://www.flipkart.com/',
+        }
+
+        scraped_reviews = []
+
+        for page in range(1, max_pages + 1):
+            page_url = reviews_url
+            if page > 1:
+                separator = '&' if '?' in reviews_url else '?'
+                page_url = f"{reviews_url}{separator}page={page}"
+
+            try:
+                resp = session.get(page_url, headers=headers, timeout=8)
+                if resp.status_code != 200:
+                    break
+
+                soup = BeautifulSoup(resp.text, 'html.parser')
+
+                # Search all review text div containers
+                review_containers = (
+                    soup.find_all('div', class_='ZmyHeo') or
+                    soup.find_all('div', class_='t-ZTKy') or
+                    soup.find_all('div', class_='_27M-gpx') or
+                    soup.find_all('div', {'class': lambda c: c and 'review' in c.lower()})
+                )
+
+                for container in review_containers:
+                    text_blocks = container.find_all(['p', 'div', 'span'])
+                    for block in text_blocks:
+                        text = block.get_text(separator=' ', strip=True)
+                        if 25 < len(text) < 2000:
+                            lower = text.lower()
+                            skip_words = ['read more', 'helpful', 'report', 'reply', 'verified purchase',
+                                          'certified buyer', 'images', 'questions', 'rate product']
+                            if not any(s in lower for s in skip_words):
+                                scraped_reviews.append(text)
+
+                if page < max_pages:
+                    time.sleep(1.0)
+
+            except Exception:
+                break
+
+        # Deduplicate preserving order
+        seen = set()
+        unique_reviews = []
+        for r in scraped_reviews:
+            key = r[:80]
+            if key not in seen:
+                seen.add(key)
+                unique_reviews.append(r)
+
+        return unique_reviews
+
+    except Exception:
+        return []
+
+
 def fetch_product_reviews(url, product_name):
     """
-    Returns a batch of reviews for the product.
-    Includes realistic genuine and fake templates using the product's name.
+    Main entry point for fetching product reviews.
+    
+    Strategy:
+    1. Try live-scraping actual reviews from the Flipkart URL using cloudscraper.
+    2. If scraping returns sufficient results (>= 5 reviews), use them directly.
+    3. Otherwise, generate a diverse, randomized batch of product-specific reviews 
+       tailored to product_name (ensuring offline stability & unique reviews on every run).
     """
     import random
-    
-    # Dynamic review templates referencing the parsed product name
-    reviews = []
-    
-    # 1. Genuine Positive reviews (Detailed, balanced)
-    gen_pos = [
-        f"I purchased this {product_name} last week. The design is beautiful and it functions exactly as described. The battery life is decent, though charging could be slightly faster. Highly recommended!",
-        f"Excellent value for money. This {product_name} has exceeded my expectations in daily usage. Sturdy build and fast shipping.",
-        f"Decent {product_name}. It has some minor flaws in the finish, but the performance is top-notch for the price.",
-        f"Very happy with the purchase of this {product_name}. Customer service was very helpful when resolving my setup questions.",
-        f"Honestly, this is a solid {product_name}. The build is premium and the UI is responsive. It is worth the price.",
-        f"Good product. The packaging was neat, and it works perfectly. Have been using it for a couple of days.",
-        f"The {product_name} arrived on time. It has good build quality and matches the specifications listed online.",
-        f"I was skeptical about buying this {product_name} online, but it turned out to be very reliable and high quality."
+
+    # Step 1: Try live scraping
+    live_reviews = []
+    is_flipkart = 'flipkart.com' in url.lower()
+
+    if is_flipkart:
+        live_reviews = _scrape_flipkart_reviews(url, max_pages=3)
+
+    if len(live_reviews) >= 5:
+        random.shuffle(live_reviews)
+        return live_reviews
+
+    # Step 2: Dynamic product-specific review generation
+    reviews = list(live_reviews)
+
+    # Varied, dynamic review templates customized to product_name
+    gen_pos_templates = [
+        f"I bought this {product_name} last week on sale. The build quality is impressionable and performance is very smooth for daily tasks. Battery duration is good too.",
+        f"Honestly, {product_name} is worth every rupee spent. The packaging was neat, and delivery was completed before estimated time.",
+        f"Decent choice if you are looking for a reliable {product_name}. Minor drawback on charging speed, but overall usability is solid.",
+        f"Extremely satisfied with this {product_name}. The display and overall finish feel premium in hand. Highly recommended for regular use.",
+        f"Bought this {product_name} for my daily work. Has been working without any issues for 2 weeks now. Value for money product.",
+        f"The {product_name} arrived safely. The box was sealed properly, and all accessories were included in working condition.",
+        f"Was hesitant before purchasing {product_name} online, but it turned out to be a great decision. Very responsive and durable.",
+        f"Solid product performance from {product_name}. Camera/build specs match what was described on the product page.",
     ]
-    
-    # 2. Genuine Negative reviews (Detailed critique, balanced tone)
-    gen_neg = [
-        f"The {product_name} arrived with a minor scratch on the frame. It still works, but I expected better packaging quality.",
-        f"The performance of the {product_name} is okay, but the user interface feels slightly outdated. Decent but could be better.",
-        f"Average product. The {product_name} works fine for basic needs, but is not suitable for heavy professional tasks.",
-        f"I'm disappointed with the battery backup of this {product_name}. It barely lasts a few hours on a full charge."
+
+    gen_neg_templates = [
+        f"The {product_name} works okay, but the outer frame has slight finishing defects. Expected better quality control.",
+        f"Average experience with {product_name}. It handles basic tasks fine, but lags under heavy workload or gaming.",
+        f"Disappointed with battery life on {product_name}. Need to charge it multiple times a day under normal usage.",
+        f"The {product_name} arrived slightly late and the packaging box was dented. Product itself functions fine though.",
     ]
-    
-    # 3. Fake Positive reviews (Hype, capitals, exclamations)
-    fake_pos = [
-        f"!!! BEST {product_name} EVER !!! AMAZING QUALITY !!! MUST BUY NOW !!! YOU WILL NOT REGRET IT !!!",
-        f"OMG!!! Simply outstanding! This {product_name} is the best thing I have ever bought in my life! Five stars!!!",
-        f"!!! UNBELIEVABLE QUALITY !!! Absolute perfection. Buy this {product_name} immediately, thank me later!!!",
-        f"ABSOLUTELY PERFECT!!! 10/10 stars. Super fast delivery and extremely high quality {product_name}!!!",
-        f"WOW! DO NOT HESITATE! Buy this {product_name} right now. I love it so much! PERFECT PERFECT!!!"
+
+    fake_pos_templates = [
+        f"!!! BEST {product_name} IN THE WORLD !!! UNBELIEVABLE QUALITY !!! MUST BUY NOW !!! YOU WILL NOT REGRET IT !!!",
+        f"OMG!!! Absolute perfection! This {product_name} is the best product I have ever bought in my entire life! 10/10 STARS!!!",
+        f"!!! OUTSTANDING {product_name} !!! Super fast delivery, insane performance! Buy immediately, thank me later!!!",
+        f"ABSOLUTELY PERFECT!!! 100% genuine and mindblowing quality {product_name}!!! BUY IT RIGHT NOW WOW WOW WOW!!!",
+        f"WOW! DO NOT HESITATE! Grab this {product_name} before stock runs out! PERFECT PERFECT PERFECT!!!",
     ]
-    
-    # 4. Fake Negative reviews (Exaggerated hate, clickbait terms)
-    fake_neg = [
-        f"!!! COMPLETE SCAM !!! DO NOT BUY THIS {product_name} !!! WASTE OF MONEY AND TIME !!!",
-        f"!!! WORST {product_name} EVER !!! BROKE IN ONE MINUTE !!! TRASH !!! RUN AWAY !!!",
-        f"CRAP!!! Scammer seller. Do not trust the other reviews on this {product_name}!!! Total garbage!!!",
-        f"!!! WARNING !!! This {product_name} is dangerous and stopped working immediately! REFUND MY MONEY!!!",
-        f"TERRIBLE!!! Absolutely useless {product_name}. Zero stars. The seller refused to reply to my messages!"
+
+    fake_neg_templates = [
+        f"!!! COMPLETE SCAM !!! DO NOT BUY THIS {product_name} !!! TOTAL WASTE OF MONEY AND TIME !!!",
+        f"!!! WORST {product_name} EVER !!! BROKE IN ONE SECOND !!! CHEAP TRASH !!! RUN AWAY FROM THIS SELLER !!!",
+        f"FAKE PRODUCT!!! Scammer seller sent defective {product_name}. Do not trust positive reviews here!!! TOTAL GARBAGE!!!",
+        f"!!! WARNING !!! This {product_name} stopped working immediately! REFUND MY MONEY NOW YOU FRAUD SELLER!!!",
+        f"TERRIBLE SERVICE!!! Useless product and seller refused to accept return. ZERO STARS!!!",
     ]
-    
-    # Add reviews
-    for r in gen_pos:
+
+    # Combine and shuffle
+    sample_gen_pos = random.sample(gen_pos_templates, min(len(gen_pos_templates), 6))
+    sample_gen_neg = random.sample(gen_neg_templates, min(len(gen_neg_templates), 3))
+    sample_fake_pos = random.sample(fake_pos_templates, min(len(fake_pos_templates), 4))
+    sample_fake_neg = random.sample(fake_neg_templates, min(len(fake_neg_templates), 4))
+
+    for r in sample_gen_pos + sample_gen_neg + sample_fake_pos + sample_fake_neg:
         reviews.append(r)
-    for r in gen_neg:
-        reviews.append(r)
-    for r in fake_pos:
-        reviews.append(r)
-    for r in fake_neg:
-        reviews.append(r)
-        
-    # Shuffle list to make the sequence look realistic
+
     random.shuffle(reviews)
     return reviews
+
