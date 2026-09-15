@@ -139,99 +139,52 @@
 
         <!-- Analyzer Section -->
         <div id="analyzer" class="scroll-mt py-4">
-            <div class="card shadow-lg border-0 rounded-4 bg-card">
-                <div class="card-header border-bottom py-3 px-4">
-                    <ul class="nav nav-pills card-header-pills" id="analyzerTab" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active fw-bold" id="text-tab" data-bs-toggle="tab" data-bs-target="#text-pane" type="button" role="tab" aria-controls="text-pane" aria-selected="true">
-                                <i class="bi bi-file-earmark-text me-1"></i> Analyze Review Text
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link fw-bold" id="url-tab" data-bs-toggle="tab" data-bs-target="#url-pane" type="button" role="tab" aria-controls="url-pane" aria-selected="false">
-                                <i class="bi bi-link-45deg me-1"></i> Analyze Product Link
-                            </button>
-                        </li>
-                    </ul>
+            <div class="card shadow-lg border-0 rounded-4 bg-card overflow-hidden">
+                <div class="card-header border-bottom py-3 px-4 bg-primary text-white d-flex align-items-center gap-2">
+                    <i class="bi bi-link-45deg fs-4"></i>
+                    <h5 class="mb-0 fw-bold">Product Link Analysis</h5>
                 </div>
-                <div class="card-body p-4 tab-content" id="analyzerTabContent">
-                    <!-- Tab 1: Single Review Text -->
-                    <div class="tab-pane fade show active" id="text-pane" role="tabpanel" aria-labelledby="text-tab" tabindex="0">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <label for="reviewTextArea" class="form-label fw-semibold text-secondary mb-0">Paste Product Review Text</label>
-                            <span id="charCounter" class="badge bg-secondary-subtle text-secondary py-2 px-3 fw-medium">0 / 2000 chars</span>
+                <div class="card-body p-4 p-lg-5">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <label for="productUrlInput" class="form-label fw-semibold text-secondary mb-0">Paste Product URL</label>
+                        <div class="d-flex gap-1 flex-wrap small">
+                            <span class="badge bg-secondary-subtle text-secondary py-1 px-2">Amazon</span>
+                            <span class="badge bg-secondary-subtle text-secondary py-1 px-2">Flipkart</span>
+                            <span class="badge bg-secondary-subtle text-secondary py-1 px-2">Myntra</span>
+                            <span class="badge bg-secondary-subtle text-secondary py-1 px-2">Meesho</span>
                         </div>
-                        <form id="predictionForm" action="{{ url_for('predict') }}" method="POST">
-                            <div class="mb-4">
-                                <textarea class="form-control form-control-lg rounded-3" id="reviewTextArea" name="review" rows="6" placeholder="Type or paste the product review here (minimum 15 characters, maximum 2000)..." required maxlength="2000"></textarea>
-                                <div class="invalid-feedback mt-2" id="validationFeedback">
-                                    Please write at least 15 characters to get a reliable ML prediction.
-                                </div>
-                            </div>
-
-                            <!-- Action Buttons -->
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <button type="button" class="btn btn-outline-primary" id="btnGenuineSample">
-                                        <i class="bi bi-check-circle me-1"></i> Genuine Review Sample
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger" id="btnFakeSample">
-                                        <i class="bi bi-x-circle me-1"></i> Fake Review Sample
-                                    </button>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-secondary px-4 py-2" id="btnClear">
-                                        <i class="bi bi-trash me-1"></i> Clear
-                                    </button>
-                                    <button type="submit" class="btn btn-primary px-5 py-2 shadow-sm" id="btnSubmit">
-                                        <i class="bi bi-magic me-1"></i> Run Predictor
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
                     </div>
-
-                    <!-- Tab 2: Product URL Link -->
-                    <div class="tab-pane fade" id="url-pane" role="tabpanel" aria-labelledby="url-tab" tabindex="0">
-                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                            <label for="productUrlInput" class="form-label fw-semibold text-secondary mb-0">Paste Product URL (Amazon, Flipkart, Myntra, Meesho, etc.)</label>
-                            <div class="d-flex gap-1 flex-wrap small">
-                                <span class="badge bg-secondary-subtle text-secondary py-1 px-2">Amazon</span>
-                                <span class="badge bg-secondary-subtle text-secondary py-1 px-2">Flipkart</span>
-                                <span class="badge bg-secondary-subtle text-secondary py-1 px-2">Myntra</span>
-                                <span class="badge bg-secondary-subtle text-secondary py-1 px-2">Meesho</span>
-                                <span class="badge bg-secondary-subtle text-secondary py-1 px-2">+ More</span>
+                    <form id="productUrlForm" action="{{ url_for('predict_product') }}" method="POST">
+                        <div class="mb-4">
+                            <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-body-secondary border-0 text-secondary">
+                                    <i class="bi bi-globe2"></i>
+                                </span>
+                                <input type="url" class="form-control border-0 px-3" id="productUrlInput" name="product_url" placeholder="https://www.amazon.in/dp/... or https://www.flipkart.com/..." required style="box-shadow: none;">
+                                <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btnSubmitUrl">
+                                    Analyze <i class="bi bi-arrow-right ms-1"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback mt-2 d-block text-danger d-none" id="urlValidationFeedback">
+                                Please enter a valid HTTP or HTTPS product URL link.
                             </div>
                         </div>
-                        <form id="productUrlForm" action="{{ url_for('predict_product') }}" method="POST">
-                            <div class="mb-4">
-                                <input type="url" class="form-control form-control-lg rounded-3" id="productUrlInput" name="product_url" placeholder="Paste product URL (e.g. https://www.amazon.in/dp/... or https://www.flipkart.com/...)" required>
-                                <div class="invalid-feedback mt-2" id="urlValidationFeedback">
-                                    Please enter a valid HTTP or HTTPS product URL link.
-                                </div>
-                            </div>
 
-                            <!-- Action Buttons -->
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <button type="button" class="btn btn-outline-primary" id="btnAmazonSample">
-                                        <i class="bi bi-amazon me-1"></i> Amazon Sample URL
-                                    </button>
-                                    <button type="button" class="btn btn-outline-info" id="btnFlipkartSample">
-                                        <i class="bi bi-bag-check me-1"></i> Flipkart Sample URL
-                                    </button>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-secondary px-4 py-2" id="btnClearUrl">
-                                        <i class="bi bi-trash me-1"></i> Clear URL
-                                    </button>
-                                    <button type="submit" class="btn btn-primary px-5 py-2 shadow-sm" id="btnSubmitUrl">
-                                        <i class="bi bi-search me-1"></i> Analyze Product Reviews
-                                    </button>
-                                </div>
+                        <!-- Action Buttons -->
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnAmazonSample">
+                                    <i class="bi bi-amazon me-1"></i> Try Amazon URL
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnFlipkartSample">
+                                    <i class="bi bi-bag-check me-1"></i> Try Flipkart URL
+                                </button>
+                                <button type="button" class="btn btn-sm btn-link text-secondary text-decoration-none" id="btnClearUrl">
+                                    <i class="bi bi-trash"></i> Clear
+                                </button>
                             </div>
-                        </form>
-                    </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
