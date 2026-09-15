@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fake Review Detector - Machine Learning App</title>
+    <title>VeriTrust AI — Fake Review Detection</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -90,47 +90,62 @@
         <!-- Hero Section -->
         <div class="row align-items-center g-5 mb-5">
             <div class="col-lg-6 text-center text-lg-start">
-                <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-2 mb-3">Natural Language Processing</span>
-                <h1 class="display-5 fw-bold lh-tight mb-3">Detect Fake Reviews with <span class="text-gradient">Machine Learning</span></h1>
-                <p class="lead text-secondary mb-4">Protect your business and customers from fake online ratings. Enter a product review below, and our model will analyze structural features, lexical cues, and sentiment values to determine if it is genuine or fake.</p>
+                <span class="hero-badge mb-4">
+                    <i class="bi bi-cpu-fill"></i> Powered by Machine Learning
+                </span>
+                <h1 class="display-5 fw-bold lh-tight mb-3 mt-3">Detect Fake Reviews with <span class="text-gradient">AI Precision</span></h1>
+                <p class="lead mb-4" style="color:var(--text-2);">Instantly analyse product pages from Amazon, Flipkart, Myntra &amp; more. Our NLP model scans every review for signs of spam, bias, and manipulation.</p>
                 <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-3">
-                    <a href="#analyzer" class="btn btn-primary btn-lg px-4 shadow-sm"><i class="bi bi-cpu me-2"></i> Try Analyzer</a>
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-lg px-4"><i class="bi bi-bar-chart-line me-2"></i> View Dashboard</a>
+                    <a href="#analyzer" class="btn btn-primary btn-lg px-5 py-3">
+                        <i class="bi bi-shield-check me-2"></i> Analyze Now
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-lg px-4 py-3">
+                        <i class="bi bi-bar-chart-line me-2"></i> Dashboard
+                    </a>
+                </div>
+                <!-- Floating stats pills -->
+                <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-3 mt-4">
+                    <div class="stat-card-3d px-3 py-2 d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-shield-fill-check text-success"></i>
+                        <span style="font-size:0.85rem;color:var(--text-2);">TF-IDF + NLP Model</span>
+                    </div>
+                    <div class="stat-card-3d px-3 py-2 d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-graph-up-arrow" style="color:var(--blue);"></i>
+                        <span style="font-size:0.85rem;color:var(--text-2);">Logistic Regression</span>
+                    </div>
+                    <div class="stat-card-3d px-3 py-2 d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-lightning-charge-fill text-warning"></i>
+                        <span style="font-size:0.85rem;color:var(--text-2);">Real-Time Results</span>
+                    </div>
                 </div>
             </div>
             <div class="col-lg-6">
                 <!-- Banner Image -->
-                <div class="mb-4 overflow-hidden rounded-4 shadow-lg border border-opacity-10 hover-lift-image">
-                    <img src="{{ url_for('static', filename='images/hero.jpg') }}" alt="AI Trust Banner" class="img-fluid" style="width: 100%; max-height: 220px; object-fit: cover; transition: transform 0.3s ease;">
+                <div class="mb-4 overflow-hidden hover-lift-image" style="border-radius:var(--radius);border:1px solid var(--glass-border);">
+                    <img src="{{ url_for('static', filename='images/hero.jpg') }}" alt="AI Trust Banner" class="img-fluid" style="width:100%;max-height:220px;object-fit:cover;transition:transform 0.3s ease;">
                 </div>
-                <!-- Visual Features Box -->
-                <div class="feature-showcase shadow-lg rounded-4 p-4 border border-opacity-10 bg-card">
-                    <h5 class="fw-bold mb-4">How it works:</h5>
-                    <div class="d-flex gap-3 mb-4">
-                        <div class="icon-box bg-primary-subtle text-primary">
-                            <i class="bi bi-funnel"></i>
-                        </div>
+                <!-- Feature Cards -->
+                <div class="feature-showcase p-4">
+                    <h5 class="fw-bold mb-4" style="color:var(--text-1);">How it works</h5>
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="icon-box bg-primary-subtle text-primary"><i class="bi bi-funnel"></i></div>
                         <div>
-                            <h6 class="fw-bold mb-1">Lexical Analysis</h6>
-                            <p class="text-secondary mb-0">Processes n-grams using TF-IDF (Term Frequency-Inverse Document Frequency) to find suspicious lexical phrases.</p>
+                            <h6 class="fw-bold mb-1">TF-IDF Lexical Analysis</h6>
+                            <p class="mb-0" style="color:var(--text-2);font-size:0.88rem;">Processes n-grams to find suspicious lexical patterns hidden in review text.</p>
                         </div>
                     </div>
-                    <div class="d-flex gap-3 mb-4">
-                        <div class="icon-box bg-success-subtle text-success">
-                            <i class="bi bi-percent"></i>
-                        </div>
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="icon-box bg-success-subtle text-success"><i class="bi bi-percent"></i></div>
                         <div>
-                            <h6 class="fw-bold mb-1">Stylometric Statistics</h6>
-                            <p class="text-secondary mb-0">Computes punctuation density (e.g. exclamation marks), character lengths, and capitalization ratios.</p>
+                            <h6 class="fw-bold mb-1">Stylometric Features</h6>
+                            <p class="mb-0" style="color:var(--text-2);font-size:0.88rem;">Measures punctuation density, caps ratio, and exclamation mark frequency.</p>
                         </div>
                     </div>
                     <div class="d-flex gap-3">
-                        <div class="icon-box bg-info-subtle text-info">
-                            <i class="bi bi-emoji-smile"></i>
-                        </div>
+                        <div class="icon-box bg-info-subtle text-info"><i class="bi bi-emoji-smile"></i></div>
                         <div>
                             <h6 class="fw-bold mb-1">VADER Sentiment Polarity</h6>
-                            <p class="text-secondary mb-0">Detects extreme positive or negative sentiment mismatching the typical product evaluation.</p>
+                            <p class="mb-0" style="color:var(--text-2);font-size:0.88rem;">Detects extreme sentiment mismatch typical of promotional fake reviews.</p>
                         </div>
                     </div>
                 </div>
@@ -139,9 +154,9 @@
 
         <!-- Analyzer Section -->
         <div id="analyzer" class="scroll-mt py-4">
-            <div class="card shadow-lg border-0 rounded-4 bg-card overflow-hidden">
-                <div class="card-header border-bottom py-3 px-4 bg-primary text-white d-flex align-items-center gap-2">
-                    <i class="bi bi-link-45deg fs-4"></i>
+            <div class="card overflow-hidden" style="border:1px solid var(--glass-border)!important;">
+                <div class="card-header py-3 px-4 d-flex align-items-center gap-2" style="background:linear-gradient(135deg,rgba(59,130,246,0.2),rgba(139,92,246,0.15))!important;border-bottom:1px solid var(--glass-border)!important;">
+                    <i class="bi bi-link-45deg fs-4" style="color:var(--blue);filter:drop-shadow(0 0 6px rgba(59,130,246,0.7));"></i>
                     <h5 class="mb-0 fw-bold">Product Link Analysis</h5>
                 </div>
                 <div class="card-body p-4 p-lg-5">
@@ -191,10 +206,19 @@
     </main>
 
     <!-- Footer -->
-    <footer class="footer mt-auto py-4 border-top">
-        <div class="container text-center text-secondary">
-            <p class="mb-1">Fake Product Review Detection using Machine Learning</p>
-            <small>&copy; 2026 VeriTrust AI. Developed for B.Tech AI & ML Curriculum. Runs completely offline.</small>
+    <footer class="footer mt-auto py-4 no-print">
+        <div class="container">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-check" style="color:var(--blue);filter:drop-shadow(0 0 6px rgba(59,130,246,0.5));font-size:1.2rem;"></i>
+                    <span class="fw-bold" style="color:var(--text-2);">VeriTrust AI</span>
+                </div>
+                <p class="mb-0 small" style="color:var(--text-3);">Fake Review Detection using NLP &amp; Machine Learning &mdash; B.Tech AI &amp; ML Project &copy; 2026</p>
+                <div class="d-flex gap-3">
+                    <a href="{{ url_for('dashboard') }}" class="small" style="color:var(--text-3);text-decoration:none;">Dashboard</a>
+                    <a href="{{ url_for('report') }}" class="small" style="color:var(--text-3);text-decoration:none;">Report</a>
+                </div>
+            </div>
         </div>
     </footer>
 
