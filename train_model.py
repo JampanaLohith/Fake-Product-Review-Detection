@@ -53,12 +53,18 @@ def generate_sample_dataset(filepath="dataset.csv"):
         for t in times:
             for feat in features[p]:
                 adj = random.choice(positive_adjs)
-                review = (
-                    f"I purchased this {p} {t}. The {feat} is {adj}. "
-                    f"It has been running smoothly without any major issues. "
-                    f"Overall, it is a decent value for money, though shipping took an extra day. "
-                    f"I would recommend this to anyone looking for a reliable {p}."
-                )
+                
+                # Add variety in length
+                if random.random() > 0.5:
+                    review = (
+                        f"I purchased this {p} {t}. The {feat} is {adj}. "
+                        f"It has been running smoothly without any major issues. "
+                        f"Overall, it is a decent value for money, though shipping took an extra day. "
+                        f"I would recommend this to anyone looking for a reliable {p}."
+                    )
+                else:
+                    review = f"Solid {p}. The {feat} works {adj}. Good value for money."
+                    
                 genuine_reviews.append((review, 0))
 
     # Generate Genuine Negative reviews (detailed critiques, balanced tone, normal casing)
@@ -66,12 +72,16 @@ def generate_sample_dataset(filepath="dataset.csv"):
         for t in times:
             for feat in features[p]:
                 adj = random.choice(negative_adjs)
-                review = (
-                    f"I received the {p} {t} but I am not entirely satisfied. "
-                    f"The {feat} seems {adj} and didn't meet my expectations. "
-                    f"Additionally, the build quality feels a bit plastic-like. "
-                    f"It works okay for basic stuff, but I wouldn't recommend it if you need high performance."
-                )
+                if random.random() > 0.5:
+                    review = (
+                        f"I received the {p} {t} but I am not entirely satisfied. "
+                        f"The {feat} seems {adj} and didn't meet my expectations. "
+                        f"Additionally, the build quality feels a bit plastic-like. "
+                        f"It works okay for basic stuff, but I wouldn't recommend it if you need high performance."
+                    )
+                else:
+                    review = f"Average {p}. The {feat} is quite {adj}. Not exactly what I expected for the price."
+                    
                 genuine_reviews.append((review, 0))
 
     # Generate Fake Positive reviews (extreme hype, caps, exclamation marks, short repetitive sentences)
