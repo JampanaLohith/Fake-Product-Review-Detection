@@ -425,7 +425,7 @@ def _scrape_flipkart_reviews(url):
                 "author": "Flipkart Customer",
                 "date": None,
                 "verified": True,
-                "source": "Live Scraped – Flipkart"
+                "source": "Live Scraped - Flipkart"
             })
         return reviews
     except Exception:
@@ -478,7 +478,7 @@ def _scrape_amazon_reviews(url):
                 "author": author,
                 "date": date,
                 "verified": verified,
-                "source": "Live Scraped – Amazon"
+                "source": "Live Scraped - Amazon"
             })
         return reviews
     except Exception:
@@ -507,7 +507,7 @@ def _scrape_myntra_reviews(url):
                 "author": "Myntra Customer",
                 "date": None,
                 "verified": True,
-                "source": "Live Scraped – Myntra"
+                "source": "Live Scraped - Myntra"
             })
         return reviews
     except Exception:
@@ -536,7 +536,7 @@ def _scrape_meesho_reviews(url):
                 "author": "Meesho Customer",
                 "date": None,
                 "verified": True,
-                "source": "Live Scraped – Meesho"
+                "source": "Live Scraped - Meesho"
             })
         return reviews
     except Exception:
@@ -570,7 +570,7 @@ def _scrape_generic_reviews(url):
                         "author": "Customer",
                         "date": None,
                         "verified": False,
-                        "source": "Live Scraped – Web"
+                        "source": "Live Scraped - Web"
                     })
             if reviews:
                 break
