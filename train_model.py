@@ -42,76 +42,112 @@ def generate_sample_dataset(filepath="dataset.csv"):
         "electric kettle": ["boiling speed", "handle grip", "auto-shutoff feature", "spout design"]
     }
 
-    positive_adjs = ["excellent", "quite good", "decent", "impressive", "reliable", "satisfying", "outstanding", "great"]
+    positive_adjs = ["excellent", "quite good", "decent", "impressive", "reliable", "satisfying", "outstanding", "great", "solid"]
     negative_adjs = ["mediocre", "disappointing", "subpar", "faulty", "flimsy", "average", "defective", "bad"]
 
     genuine_reviews = []
     fake_reviews = []
 
-    # Generate Genuine Positive reviews (balanced, detailed, normal casing, few/no exclamation marks)
+    # Generate balanced genuine reviews
     for p in products:
         for t in times:
             for feat in features[p]:
-                adj = random.choice(positive_adjs)
+                pos_adj = random.choice(positive_adjs)
+                neg_adj = random.choice(negative_adjs)
                 
-                # Add variety in length
-                if random.random() > 0.5:
-                    review = (
-                        f"I purchased this {p} {t}. The {feat} is {adj}. "
-                        f"It has been running smoothly without any major issues. "
-                        f"Overall, it is a decent value for money, though shipping took an extra day. "
-                        f"I would recommend this to anyone looking for a reliable {p}."
-                    )
-                else:
-                    review = f"Solid {p}. The {feat} works {adj}. Good value for money."
-                    
-                genuine_reviews.append((review, 0))
+                # Detailed positive
+                genuine_reviews.append((
+                    f"I purchased this {p} {t}. The {feat} is {pos_adj}. It has been running smoothly without any major issues. Overall, it is a decent value for money, though shipping took an extra day. I would recommend this {p}.",
+                    0
+                ))
+                # Short positive
+                genuine_reviews.append((
+                    f"Solid {p}. The {feat} works {pos_adj}. Good value for money.",
+                    0
+                ))
+                # Detailed negative
+                genuine_reviews.append((
+                    f"I received the {p} {t} but I am not entirely satisfied. The {feat} seems {neg_adj} and didn't meet my expectations. Additionally, the build quality feels a bit plastic-like. It works okay for basic stuff, but I wouldn't recommend it if you need high performance.",
+                    0
+                ))
+                # Short negative
+                genuine_reviews.append((
+                    f"Average {p}. The {feat} is quite {neg_adj}. Not exactly what I expected for the price.",
+                    0
+                ))
 
-    # Generate Genuine Negative reviews (detailed critiques, balanced tone, normal casing)
-    for p in products:
-        for t in times:
-            for feat in features[p]:
-                adj = random.choice(negative_adjs)
-                if random.random() > 0.5:
-                    review = (
-                        f"I received the {p} {t} but I am not entirely satisfied. "
-                        f"The {feat} seems {adj} and didn't meet my expectations. "
-                        f"Additionally, the build quality feels a bit plastic-like. "
-                        f"It works okay for basic stuff, but I wouldn't recommend it if you need high performance."
-                    )
-                else:
-                    review = f"Average {p}. The {feat} is quite {adj}. Not exactly what I expected for the price."
-                    
-                genuine_reviews.append((review, 0))
+    random.seed(42)
+    random.shuffle(genuine_reviews)
+    genuine_reviews = genuine_reviews[:450]
 
-    # Generate Fake Positive reviews (extreme hype, caps, exclamation marks, short repetitive sentences)
-    fake_pos_phrases = [
+    # Diverse fake positive review components
+    fake_pos_openers = [
         "AMAZING PRODUCT!!! THE BEST THING EVER!!! MUST BUY NOW!!!",
         "WOW!!! Simply outstanding! Best purchase I've ever made in my entire life!",
         "UNBELIEVABLE QUALITY!!! Exceeded all expectations!!! Buy it right now, thank me later!!!",
         "ABSOLUTELY PERFECT!!! 10/10 stars!!! Extremely fast shipping and wonderful product!!!",
         "OMG!!! The seller is an angel! The best customer service! Strongly recommended!!!",
-        "JUST WOW! DO NOT HESITATE! Buy this product immediately! I love it so much!"
+        "JUST WOW! DO NOT HESITATE! Buy this product immediately! I love it so much!",
+        "SUPERB QUALITY! Outstanding seller! Fast shipping, packed nicely. Buy without hesitation! 5 STARS!",
+        "FIVE STARS ARE NOT ENOUGH! 100/100 best deal on the entire market!",
+        "I AM SO IN LOVE WITH THIS PRODUCT! Truly fantastic experience! Best ever!",
+        "EXCELLENT 5 STARS LOVE IT SO MUCH PERFECT QUALITY ORDERED 10 MORE!",
+        "AUTHENTIC 100% ORIGINAL PRODUCT! Incredible results, must have!",
+        "TOP NOTCH! Best in class! Unmatched performance, buy right now!",
+        "100% SATISFACTION GUARANTEED! Best item I have ever received in my life!",
+        "MIRACULOUS PRODUCT! DO NOT THINK TWICE! BUY BUY BUY IMMEDIATELY!"
     ]
-    for _ in range(120):
-        p = random.choice(products)
-        phrase = random.choice(fake_pos_phrases)
-        review = f"{phrase} This {p} is a lifesaver! I bought 5 more for my family members. PERFECT!!!"
-        fake_reviews.append((review, 1))
 
-    # Generate Fake Negative reviews (extreme hate, caps, exclamation marks, calling it a scam, refund demands)
-    fake_neg_phrases = [
-        "COMPLETE SCAM!!! DO NOT BUY!!! WASTE OF MONEY AND TIME!!!",
-        "WORST PRODUCT EVER!!! BROKE IN ONE MINUTE!!! TRASH!!!",
+    fake_pos_closers = [
+        "PERFECT PERFECT PERFECT!!!",
+        "MUST BUY IMMEDIATELY YOU WILL NOT REGRET IT!",
+        "BEST DECISION EVER! FIVE STARS ALL THE WAY!",
+        "10/10 STARS! DO NOT HESITATE BUY IT NOW!",
+        "DO NOT WAIT, GRAB IT BEFORE IT RUNS OUT OF STOCK!",
+        "LIFE CHANGING PRODUCT! THANK YOU SELLER!",
+        "HIGHLY HIGHLY RECOMMENDED TO EVERYONE IN THE WORLD!",
+        "WOW WOW WOW AMAZING QUALITY 100 STARS!",
+        "BEST PURCHASE EVER MADE! EVERYONE MUST GET THIS!",
+        "SUPER FAST DELIVERY AND BEAUTIFUL ITEM!"
+    ]
+
+    fake_neg_openers = [
+        "COMPLETE SCAM!!! DO NOT BUY FROM THIS FRAUD SELLER!!! TOTAL WASTE OF MONEY AND TIME!!!",
+        "WORST PRODUCT EVER MADE IN HUMAN HISTORY!!! BROKE IN ONE MINUTE!!! TRASH!!!",
         "CRAP!!! SCAMMER SELLER!!! RUN AWAY!!! DO NOT TRUST THIS PRODUCT!!!",
         "TERRIBLE!!! Total garbage. Zero stars if possible. Refund my money immediately!!!",
-        "WARNING!!! FAKE REVIEWS HERE!!! This item is dangerous and broke immediately! DON'T BUY!"
+        "WARNING!!! FAKE REVIEWS HERE!!! This item is dangerous and broke immediately! DON'T BUY!",
+        "FAKE PRODUCT ALERT! Defective garbage item sent by criminal seller! AVOID AT ALL COSTS!!!",
+        "DO NOT TRUST THESE REVIEWS! Complete fraud! Broke immediately upon opening box! TRASH!",
+        "DISGUSTING QUALITY! Cheater seller refused my refund request! PURE SCAM!",
+        "HORRIBLE EXPERIENCE! Defective cheap knockoff product! DO NOT WASTE A SINGLE RUPEE!",
+        "CHEATER SELLER DELIVERED BROKEN JUNK! AVOID AVOID AVOID THIS SCAM!"
     ]
-    for _ in range(120):
-        p = random.choice(products)
-        phrase = random.choice(fake_neg_phrases)
-        review = f"{phrase} I hate this {p}. The customer support refused to reply. AVOID AT ALL COSTS!!!"
-        fake_reviews.append((review, 1))
+
+    fake_neg_closers = [
+        "AVOID AT ALL COSTS AND REPORT THIS SELLER!",
+        "REFUND MY MONEY RIGHT NOW YOU THIEVES!",
+        "TOTAL TRASH! THROWING IT IN THE DUSTBIN!",
+        "RUN AWAY BEFORE YOU LOSE YOUR HARD EARNED MONEY!",
+        "CHEATER SELLER! CONSUMER COURT CASE INCOMING!",
+        "WORST SELLER ON THIS PLATFORM! ZERO STARS!",
+        "FRAUD FRAUD FRAUD TOTAL SCAMMER NEVER BUY!",
+        "DEFECTIVE GARBAGE BROKE ON FIRST DAY DISASTER!"
+    ]
+
+    for p in products:
+        for op in fake_pos_openers:
+            cl = random.choice(fake_pos_closers)
+            fake_reviews.append((f"{op} This {p} is unmatched. {cl}", 1))
+            cl2 = random.choice(fake_pos_closers)
+            fake_reviews.append((f"{op} Loving this {p}! {cl2}", 1))
+
+    for p in products:
+        for op in fake_neg_openers:
+            cl = random.choice(fake_neg_closers)
+            fake_reviews.append((f"{op} This {p} is completely ruined. {cl}", 1))
+            cl2 = random.choice(fake_neg_closers)
+            fake_reviews.append((f"{op} Worst {p} imaginable! {cl2}", 1))
 
     # Combine and shuffle
     all_data = genuine_reviews + fake_reviews

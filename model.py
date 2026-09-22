@@ -360,9 +360,9 @@ def fetch_product_reviews(url, product_name):
     return generated_reviews, platform, None
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # PLATFORM-SPECIFIC SCRAPERS
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 def _get_session():
     """Returns a requests.Session with browser-like headers to reduce bot detection."""
@@ -385,7 +385,7 @@ def _get_session():
 def _scrape_flipkart_reviews(url):
     """
     Attempts to scrape customer reviews from a Flipkart product page.
-    Anti-bot (Cloudflare / E002) will block most cloud IP requests —
+    Anti-bot (Cloudflare / E002) will block most cloud IP requests -
     handled gracefully by returning an empty list, triggering the
     product-specific fallback in fetch_product_reviews().
     """
@@ -544,7 +544,7 @@ def _scrape_meesho_reviews(url):
 
 
 def _scrape_generic_reviews(url):
-    """Generic scraper for any e-commerce site — tries common review CSS patterns."""
+    """Generic scraper for any e-commerce site - tries common review CSS patterns."""
     try:
         import requests
         from bs4 import BeautifulSoup

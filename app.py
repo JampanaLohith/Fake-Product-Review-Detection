@@ -458,7 +458,7 @@ def health():
     """Health-check endpoint for Render and monitoring tools."""
     return jsonify({
         "status": "ok",
-        "service": "VeriTrust AI – Fake Review Detection",
+        "service": "VeriTrust AI - Fake Review Detection",
         "models_loaded": models_loaded,
         "version": "2.0"
     })

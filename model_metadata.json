@@ -7,12 +7,12 @@
         "f1_score": 1.0,
         "confusion_matrix": [
             [
-                90,
+                85,
                 0
             ],
             [
                 0,
-                19
+                96
             ]
         ],
         "cv_mean": 1.0
@@ -24,18 +24,18 @@
         "f1_score": 1.0,
         "confusion_matrix": [
             [
-                90,
+                85,
                 0
             ],
             [
                 0,
-                19
+                96
             ]
         ]
     },
     "dataset_stats": {
-        "total_reviews": 542,
-        "genuine_count": 447,
-        "fake_count": 95
+        "total_reviews": 904,
+        "genuine_count": 424,
+        "fake_count": 480
     }
 }
