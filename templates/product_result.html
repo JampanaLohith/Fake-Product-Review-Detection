@@ -179,21 +179,24 @@
                     <h5 class="fw-bold mb-0 text-secondary"><i class="bi bi-list-stars text-primary me-2"></i>Live Scraped Reviews Audit List</h5>
                 </div>
                 <div class="card-body p-4">
-                    <!-- Bootstrap Filter Tabs -->
-                    <ul class="nav nav-tabs mb-4" id="reviewFilterTab" role="tablist">
+                    <!-- Filter Tabs (3D Glassmorphic Pills) -->
+                    <ul class="nav nav-pills gap-2 mb-4 flex-wrap" id="reviewFilterTab" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="all-reviews-tab" data-bs-toggle="tab" data-bs-target="#all-reviews-pane" type="button" role="tab" aria-controls="all-reviews-pane" aria-selected="true">
-                                All Reviews <span class="badge bg-secondary-subtle text-secondary ms-1">{{ reviews|length }}</span>
+                            <button class="nav-link active px-3 py-2 fw-semibold" id="all-reviews-tab" data-bs-toggle="tab" data-bs-target="#all-reviews-pane" type="button" role="tab" aria-controls="all-reviews-pane" aria-selected="true">
+                                <i class="bi bi-collection-fill me-1"></i> All Reviews 
+                                <span class="badge bg-secondary-subtle ms-1">{{ reviews|length }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link text-danger" id="fake-reviews-tab" data-bs-toggle="tab" data-bs-target="#fake-reviews-pane" type="button" role="tab" aria-controls="fake-reviews-pane" aria-selected="false">
-                                Flagged as Fake <span class="badge bg-danger-subtle text-danger ms-1">{{ fake_reviews|length }}</span>
+                            <button class="nav-link nav-link-danger px-3 py-2 fw-semibold" id="fake-reviews-tab" data-bs-toggle="tab" data-bs-target="#fake-reviews-pane" type="button" role="tab" aria-controls="fake-reviews-pane" aria-selected="false">
+                                <i class="bi bi-shield-x me-1"></i> Flagged as Fake 
+                                <span class="badge bg-danger-subtle ms-1">{{ fake_reviews|length }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link text-success" id="genuine-reviews-tab" data-bs-toggle="tab" data-bs-target="#genuine-reviews-pane" type="button" role="tab" aria-controls="genuine-reviews-pane" aria-selected="false">
-                                Verified Genuine <span class="badge bg-success-subtle text-success ms-1">{{ genuine_reviews|length }}</span>
+                            <button class="nav-link nav-link-success px-3 py-2 fw-semibold" id="genuine-reviews-tab" data-bs-toggle="tab" data-bs-target="#genuine-reviews-pane" type="button" role="tab" aria-controls="genuine-reviews-pane" aria-selected="false">
+                                <i class="bi bi-shield-check me-1"></i> Verified Genuine 
+                                <span class="badge bg-success-subtle ms-1">{{ genuine_reviews|length }}</span>
                             </button>
                         </li>
                     </ul>
