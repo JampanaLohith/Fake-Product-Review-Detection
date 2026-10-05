@@ -5,8 +5,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const htmlElement = document.documentElement;
     const themeToggleBtn = document.getElementById("themeToggleBtn");
     
-    // Get stored theme or default to light
-    const currentTheme = localStorage.getItem("theme") || "light";
+    // Get stored theme or default to dark for 3D glassmorphic styling
+    const currentTheme = localStorage.getItem("theme") || "dark";
     htmlElement.setAttribute("data-theme", currentTheme);
     updateThemeButtonIcon(currentTheme);
 
@@ -399,4 +399,47 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
     }
+
+    // ----------------------------------------------------
+    // 9. Interactive 3D Card Tilt & Specular Lighting Engine
+    // ----------------------------------------------------
+    function init3DTiltEngine() {
+        const tiltCards = document.querySelectorAll("[data-tilt-3d]");
+        tiltCards.forEach(card => {
+            if (!card.querySelector(".tilt-glare")) {
+                const glare = document.createElement("div");
+                glare.className = "tilt-glare";
+                card.appendChild(glare);
+            }
+
+            card.addEventListener("mousemove", e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                const rotateX = ((y - centerY) / centerY) * -11;
+                const rotateY = ((x - centerX) / centerX) * 11;
+
+                card.style.transform = `perspective(1000px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) scale3d(1.02, 1.02, 1.02)`;
+
+                const glare = card.querySelector(".tilt-glare");
+                if (glare) {
+                    const gx = (x / rect.width) * 100;
+                    const gy = (y / rect.height) * 100;
+                    glare.style.background = `radial-gradient(circle at ${gx}% ${gy}%, rgba(255, 255, 255, 0.18), transparent 60%)`;
+                    glare.style.opacity = "1";
+                }
+            });
+
+            card.addEventListener("mouseleave", () => {
+                card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
+                const glare = card.querySelector(".tilt-glare");
+                if (glare) glare.style.opacity = "0";
+            });
+        });
+    }
+
+    init3DTiltEngine();
 });
