@@ -91,134 +91,183 @@
         <div class="row align-items-center g-5 mb-5 pt-3">
             <div class="col-lg-6 text-center text-lg-start">
                 <span class="hero-badge mb-3">
-                    <i class="bi bi-shield-lock-fill text-primary"></i> Next-Gen 3D AI Sentinel
+                    <i class="bi bi-shield-lock-fill text-primary"></i> AI-Powered Review Sentinel
                 </span>
                 <h1 class="display-4 fw-extrabold lh-tight mb-3 mt-3">
-                    Detect Fake Reviews with <span class="text-gradient">3D AI Precision</span>
+                    Detect Fake Reviews with <span class="text-gradient">AI Precision</span>
                 </h1>
                 <p class="lead mb-4" style="color:var(--text-2); font-size: 1.15rem; line-height: 1.7;">
                     Instantly analyze real product pages from Amazon, Flipkart, Myntra &amp; Meesho. Our hybrid TF-IDF and stylometric machine learning engine flags bots, paid hype, and competitor attacks in real-time.
                 </p>
                 <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-3 mb-4">
-                    <a href="#analyzer" class="btn btn-3d-primary btn-lg px-5 py-3">
+                    <a href="#analyzer" class="btn btn-primary btn-lg px-5 py-3">
                         <i class="bi bi-search me-2"></i> Analyze Product Now
                     </a>
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-3d-secondary btn-lg px-4 py-3">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-lg px-4 py-3">
                         <i class="bi bi-cpu me-2"></i> Model Dashboard
                     </a>
                 </div>
 
-                <!-- 3D Metric Pills -->
+                <!-- Metric Badges -->
                 <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-2 pt-2">
-                    <div class="platform-pill-3d">
-                        <i class="bi bi-check-circle-fill text-success"></i>
-                        <span>100% Benchmark Accuracy</span>
-                    </div>
-                    <div class="platform-pill-3d">
-                        <i class="bi bi-lightning-charge-fill text-warning"></i>
-                        <span>Real-Time Scraper</span>
-                    </div>
-                    <div class="platform-pill-3d">
-                        <i class="bi bi-shield-shaded text-primary"></i>
-                        <span>Explainable ML Weights</span>
-                    </div>
+                    <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill">
+                        <i class="bi bi-check-circle-fill me-1"></i> 100% Benchmark Accuracy
+                    </span>
+                    <span class="badge bg-warning-subtle text-warning px-3 py-2 rounded-pill">
+                        <i class="bi bi-lightning-charge-fill me-1"></i> Real-Time Scraper
+                    </span>
+                    <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">
+                        <i class="bi bi-shield-shaded me-1"></i> Explainable ML Weights
+                    </span>
                 </div>
             </div>
 
-            <!-- Right Column: Interactive 3D Hero Stage -->
+            <!-- Right Column: Hero Image -->
             <div class="col-lg-6">
-                <div class="hero-stage-3d" data-tilt-3d>
-                    <!-- Floating 3D Badges Overlaying Stage -->
-                    <div class="floating-badge-3d floating-badge-1">
-                        <i class="bi bi-patch-check-fill me-1"></i> 99.4% Verified Genuine
-                    </div>
-                    <div class="floating-badge-3d floating-badge-2">
-                        <i class="bi bi-shield-x me-1"></i> Bot Network Flagged
-                    </div>
-                    <div class="floating-badge-3d floating-badge-3">
-                        <i class="bi bi-cpu me-1"></i> NLP Scanner Active
-                    </div>
-
-                    <!-- 3D Stage Graphic Wrap -->
-                    <div class="stage-graphic-wrap shadow-lg">
-                        <img src="{{ url_for('static', filename='images/hero_3d_scanner.svg') }}" 
-                             alt="3D AI Review Scanner" 
-                             class="img-fluid w-100" 
-                             style="border-radius: var(--radius); filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));">
-                    </div>
-                </div>
+                <img src="{{ url_for('static', filename='images/hero.jpg') }}" 
+                     alt="AI Review Analysis Dashboard" 
+                     class="img-fluid rounded-4 shadow-lg w-100">
             </div>
         </div>
 
-        <!-- Analyzer Section (3D Console Style) -->
+
+        <!-- Analyzer Section -->
         <div id="analyzer" class="scroll-mt py-5">
-            <div class="card search-console-3d" data-tilt-3d>
-                <div class="card-header py-4 px-4 px-lg-5 d-flex flex-wrap justify-content-between align-items-center gap-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="icon-box bg-primary-subtle text-primary shadow-sm" style="width:48px;height:48px;border-radius:14px;">
-                            <i class="bi bi-link-45deg fs-4"></i>
-                        </div>
-                        <div>
-                            <h4 class="mb-0 fw-bold">Live E-Commerce URL Analyzer</h4>
-                            <p class="mb-0 small text-secondary">Paste any product URL &mdash; our system fetches and evaluates reviews</p>
-                        </div>
-                    </div>
-                    <div class="d-flex gap-1 flex-wrap">
-                        <span class="platform-pill-3d"><i class="bi bi-amazon text-warning"></i> Amazon</span>
-                        <span class="platform-pill-3d"><i class="bi bi-bag-check text-primary"></i> Flipkart</span>
-                        <span class="platform-pill-3d"><i class="bi bi-tag-fill text-danger"></i> Myntra</span>
-                        <span class="platform-pill-3d"><i class="bi bi-cart3 text-success"></i> Meesho</span>
-                    </div>
+            <div class="card bg-card shadow-sm border-0 rounded-4">
+                <div class="card-header py-3 px-4 px-lg-5 border-bottom">
+                    <ul class="nav nav-pills gap-2" id="analyzerTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active px-4 py-2.5 fw-semibold" id="text-tab" data-bs-toggle="pill" data-bs-target="#text-pane" type="button" role="tab" aria-controls="text-pane" aria-selected="true">
+                                <i class="bi bi-file-text me-1.5"></i> Single Review Text Analyzer
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link px-4 py-2.5 fw-semibold" id="url-tab" data-bs-toggle="pill" data-bs-target="#url-pane" type="button" role="tab" aria-controls="url-pane" aria-selected="false">
+                                <i class="bi bi-link-45deg me-1.5"></i> E-Commerce Product URL Analyzer
+                            </button>
+                        </li>
+                    </ul>
                 </div>
 
                 <div class="card-body p-4 p-lg-5">
-                    <form id="productUrlForm" action="{{ url_for('predict_product') }}" method="POST">
-                        <div class="mb-4">
-                            <div class="input-group-3d d-flex flex-column flex-md-row align-items-stretch gap-2">
-                                <div class="d-flex align-items-center flex-grow-1 px-3">
-                                    <i class="bi bi-globe2 text-primary fs-5 me-2"></i>
-                                    <input type="url" 
-                                           class="form-control border-0 bg-transparent px-2 py-3" 
-                                           id="productUrlInput" 
-                                           name="product_url" 
-                                           placeholder="https://www.amazon.in/dp/... or https://www.flipkart.com/..." 
-                                           required 
-                                           style="box-shadow: none; font-size: 1.05rem;">
+                    <div class="tab-content" id="analyzerTabsContent">
+                        <!-- Tab 1: Single Review Text Analyzer -->
+                        <div class="tab-pane fade show active" id="text-pane" role="tabpanel" aria-labelledby="text-tab" tabindex="0">
+                            <div class="mb-3">
+                                <h4 class="fw-bold mb-1">Direct Review Text Evaluation</h4>
+                                <p class="text-secondary small mb-0">Paste any customer review to inspect stylometrics, VADER sentiment polarity, and TF-IDF deceptive vocabulary.</p>
+                            </div>
+
+                            <form id="predictionForm" action="{{ url_for('predict') }}" method="POST">
+                                <div class="mb-3">
+                                    <label for="reviewTextArea" class="form-label fw-semibold text-secondary">Review Content <span class="text-danger">*</span></label>
+                                    <textarea class="form-control rounded-3 p-3" 
+                                              id="reviewTextArea" 
+                                              name="review" 
+                                              rows="5" 
+                                              placeholder="Type or paste the product review here (minimum 15 characters, maximum 2000)..." 
+                                              required 
+                                              minlength="15" 
+                                              maxlength="2000"
+                                              aria-describedby="charCounter validationFeedback"></textarea>
+                                    <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
+                                        <div id="validationFeedback" class="invalid-feedback d-none text-danger small">
+                                            Please enter at least 15 characters to get a reliable ML prediction.
+                                        </div>
+                                        <span id="charCounter" class="badge bg-secondary-subtle text-secondary py-1.5 px-3 fw-medium ms-auto" aria-live="polite">
+                                            0 / 2000 chars
+                                        </span>
+                                    </div>
                                 </div>
-                                <button type="submit" class="btn btn-3d-primary px-5 py-3 fs-6" id="btnSubmitUrl">
-                                    <i class="bi bi-lightning-fill me-1"></i> Analyze Reviews
-                                </button>
-                            </div>
-                            <div class="invalid-feedback mt-2 d-block text-danger d-none" id="urlValidationFeedback">
-                                Please enter a valid HTTP or HTTPS product URL link.
-                            </div>
+
+                                <!-- Action Buttons & Presets -->
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pt-2">
+                                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                                        <span class="small fw-semibold text-secondary">Try Samples:</span>
+                                        <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3" id="btnGenuineSample">
+                                            <i class="bi bi-check-circle me-1"></i> Genuine Review
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" id="btnFakeSample">
+                                            <i class="bi bi-x-octagon me-1"></i> Fake Hype Review
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-link text-secondary text-decoration-none" id="btnClear">
+                                            <i class="bi bi-trash3 me-1"></i> Clear
+                                        </button>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary px-5 py-2.5 fs-6" id="btnSubmit">
+                                        <i class="bi bi-shield-check me-1.5"></i> Analyze Review
+                                    </button>
+                                </div>
+                            </form>
                         </div>
 
-                        <!-- Sample Presets & Controls -->
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pt-2">
-                            <div class="d-flex gap-2 flex-wrap align-items-center">
-                                <span class="small fw-semibold" style="color:var(--text-3);">Quick Test Samples:</span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="btnAmazonSample">
-                                    <i class="bi bi-amazon me-1 text-warning"></i> Amazon iPhone 15
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="btnFlipkartSample">
-                                    <i class="bi bi-bag-check me-1 text-primary"></i> Flipkart iPhone 15
-                                </button>
+                        <!-- Tab 2: E-Commerce Product URL Analyzer -->
+                        <div class="tab-pane fade" id="url-pane" role="tabpanel" aria-labelledby="url-tab" tabindex="0">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                                <div>
+                                    <h4 class="fw-bold mb-1">Live E-Commerce URL Analyzer</h4>
+                                    <p class="text-secondary small mb-0">Submit a public product link &mdash; our system validates the URL, extracts available customer reviews, and classifies the product authenticity.</p>
+                                </div>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1.5"><i class="bi bi-amazon text-warning"></i> Amazon</span>
+                                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1.5"><i class="bi bi-bag-check text-primary"></i> Flipkart</span>
+                                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1.5"><i class="bi bi-tag-fill text-danger"></i> Myntra</span>
+                                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1.5"><i class="bi bi-cart3 text-success"></i> Meesho</span>
+                                </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-link text-secondary text-decoration-none" id="btnClearUrl">
-                                <i class="bi bi-trash3 me-1"></i> Clear Input
-                            </button>
+
+                            <form id="productUrlForm" action="{{ url_for('predict_product') }}" method="POST">
+                                <div class="mb-4">
+                                    <label for="productUrlInput" class="form-label fw-semibold text-secondary">Product Page URL <span class="text-danger">*</span></label>
+                                    <div class="input-group d-flex flex-column flex-md-row align-items-stretch gap-2">
+                                        <div class="d-flex align-items-center flex-grow-1 px-3 border rounded-3 bg-transparent">
+                                            <i class="bi bi-globe2 text-primary fs-5 me-2"></i>
+                                            <input type="url" 
+                                                   class="form-control border-0 bg-transparent px-2 py-3" 
+                                                   id="productUrlInput" 
+                                                   name="product_url" 
+                                                   placeholder="https://www.amazon.in/dp/... or https://www.flipkart.com/..." 
+                                                   required 
+                                                   style="box-shadow: none; font-size: 1.05rem;"
+                                                   aria-describedby="urlValidationFeedback">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary px-5 py-3 fs-6" id="btnSubmitUrl">
+                                            <i class="bi bi-lightning-fill me-1"></i> Analyze Product Reviews
+                                        </button>
+                                    </div>
+                                    <div class="invalid-feedback mt-2 d-block text-danger d-none" id="urlValidationFeedback">
+                                        Please enter a valid HTTP or HTTPS product URL link.
+                                    </div>
+                                </div>
+
+                                <!-- Sample Presets & Controls -->
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pt-2">
+                                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                                        <span class="small fw-semibold text-secondary">Quick Test Samples:</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="btnAmazonSample">
+                                            <i class="bi bi-amazon me-1 text-warning"></i> Amazon iPhone 15
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="btnFlipkartSample">
+                                            <i class="bi bi-bag-check me-1 text-primary"></i> Flipkart iPhone 15
+                                        </button>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-link text-secondary text-decoration-none" id="btnClearUrl">
+                                        <i class="bi bi-trash3 me-1"></i> Clear Input
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- 3D Feature Grid (Interactive Cards) -->
+
+        <!-- Feature Grid -->
         <div class="py-4 mb-4">
             <div class="text-center mb-5">
                 <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-semibold mb-2">Architectural Breakdown</span>
-                <h2 class="fw-bold">How the <span class="text-gradient">3D Machine Learning Pipeline</span> Works</h2>
+                <h2 class="fw-bold">How the <span class="text-gradient">Machine Learning Pipeline</span> Works</h2>
                 <p class="text-secondary max-w-600 mx-auto" style="max-width: 650px;">
                     Every submitted product review is processed through a multi-stage feature extraction pipeline before classification.
                 </p>
@@ -227,8 +276,8 @@
             <div class="row g-4">
                 <!-- Card 1 -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="card feature-card-3d h-100" data-tilt-3d>
-                        <div class="icon-box-3d bg-primary-subtle text-primary">
+                    <div class="card bg-card shadow-sm border-0 rounded-4 h-100 p-4">
+                        <div class="icon-box bg-primary-subtle text-primary">
                             <i class="bi bi-funnel-fill"></i>
                         </div>
                         <h4 class="fw-bold mb-2">TF-IDF Lexical Extraction</h4>
@@ -243,8 +292,8 @@
 
                 <!-- Card 2 -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="card feature-card-3d h-100" data-tilt-3d>
-                        <div class="icon-box-3d bg-success-subtle text-success">
+                    <div class="card bg-card shadow-sm border-0 rounded-4 h-100 p-4">
+                        <div class="icon-box bg-success-subtle text-success">
                             <i class="bi bi-percent"></i>
                         </div>
                         <h4 class="fw-bold mb-2">Stylometric Statistics</h4>
@@ -259,8 +308,8 @@
 
                 <!-- Card 3 -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="card feature-card-3d h-100" data-tilt-3d>
-                        <div class="icon-box-3d bg-info-subtle text-info">
+                    <div class="card bg-card shadow-sm border-0 rounded-4 h-100 p-4">
+                        <div class="icon-box bg-info-subtle text-info">
                             <i class="bi bi-emoji-heart-eyes-fill"></i>
                         </div>
                         <h4 class="fw-bold mb-2">VADER Sentiment Polarity</h4>

@@ -350,20 +350,103 @@ def _generate_product_reviews(product_name, platform, url=""):
     return reviews
 
 
+def is_safe_url(url):
+    """
+    Validates that a URL is a legitimate, publicly routable HTTP/HTTPS URL.
+    Mitigates SSRF attempts to private networks, loopback, link-local, or cloud metadata.
+    Returns (is_safe: bool, reason_or_cleaned_url: str).
+    """
+    import socket
+    import ipaddress
+    from urllib.parse import urlparse
+
+    if not isinstance(url, str):
+        return False, "URL must be a string."
+    
+    url = url.strip()
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        return False, f"Invalid URL format: {e}"
+        
+    if parsed.scheme not in ("http", "https"):
+        return False, "Only HTTP and HTTPS URLs are supported."
+        
+    hostname = parsed.hostname
+    if not hostname:
+        return False, "URL must contain a valid domain name."
+        
+    # Block loopback and internal hostname strings
+    blocked_hosts = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "metadata.google.internal"}
+    host_lower = hostname.lower()
+    if host_lower in blocked_hosts or host_lower.endswith(".local") or host_lower.endswith(".internal"):
+        return False, "Access to local or internal network destinations is blocked."
+
+    # Resolve IP and verify it is not private/loopback/link-local/reserved
+    try:
+        addr_info = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        if not addr_info:
+            return False, f"Unable to resolve domain: {hostname}"
+            
+        for family, socktype, proto, canonname, sockaddr in addr_info:
+            ip_str = sockaddr[0]
+            ip = ipaddress.ip_address(ip_str)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+                return False, f"Access to private/internal IP address ({ip_str}) is prohibited."
+    except socket.gaierror:
+        return False, f"Domain name '{hostname}' could not be resolved."
+    except Exception as e:
+        return False, f"Network validation error: {e}"
+        
+    return True, url
+
+
+def safe_fetch_url(url, timeout=12, max_redirects=3):
+    """
+    Safely executes an HTTP GET request, re-validating the destination and each
+    redirect hop against SSRF restrictions.
+    """
+    import requests
+    from urllib.parse import urljoin
+
+    current_url = url
+    session = _get_session()
+    
+    for _ in range(max_redirects + 1):
+        is_safe, msg = is_safe_url(current_url)
+        if not is_safe:
+            return None, msg
+            
+        try:
+            resp = session.get(current_url, timeout=timeout, allow_redirects=False)
+            if resp.is_redirect or resp.status_code in (301, 302, 303, 307, 308):
+                location = resp.headers.get("Location")
+                if not location:
+                    break
+                current_url = urljoin(current_url, location)
+                continue
+            return resp, None
+        except requests.exceptions.Timeout:
+            return None, "Connection timed out while contacting e-commerce server."
+        except Exception as e:
+            return None, f"Network request failed: {e}"
+            
+    return None, "Too many redirects encountered."
+
+
 def fetch_product_reviews(url, product_name):
     """
-    Main entry point for fetching real product reviews.
-    
-    Workflow:
-    1. Detect platform from URL.
-    2. Try live scraping real customer reviews.
-    3. If live scraping succeeds, return live scraped reviews.
-    4. If live scraping is blocked by cloud server IP bot protection (e.g. on Render),
-       synthesize a set of product-specific customer reviews referencing product_name.
+    Main entry point for fetching real customer reviews from e-commerce product URLs.
+    Validates URLs against SSRF and platform restrictions, extracts available reviews,
+    and returns deduplicated real customer data.
     
     Returns:
         tuple: (reviews_list, platform_name, error_message)
     """
+    is_safe, err = is_safe_url(url)
+    if not is_safe:
+        return [], "Unknown", err
+
     platform = detect_platform(url)
 
     reviews = []
@@ -378,12 +461,24 @@ def fetch_product_reviews(url, product_name):
     else:
         reviews = _scrape_generic_reviews(url)
 
-    if reviews and len(reviews) >= 3:
-        return reviews, platform, None
+    # Deduplicate reviews based on normalized review text
+    unique_reviews = []
+    seen_texts = set()
+    for r in reviews:
+        norm = re.sub(r'\s+', ' ', (r.get("review_text") or "").strip().lower())
+        if norm and len(norm) >= 15 and norm not in seen_texts:
+            seen_texts.add(norm)
+            unique_reviews.append(r)
 
-    # Fallback to product-specific reviews when cloud scraping is blocked
-    generated_reviews = _generate_product_reviews(product_name, platform, url)
-    return generated_reviews, platform, None
+    if unique_reviews:
+        return unique_reviews, platform, None
+
+    msg = (
+        f"Unable to extract customer reviews from {platform}. "
+        f"The platform returned no reviews or access was blocked by third-party anti-bot protections. "
+        f"Please analyze individual review texts directly using the Single Review Analyzer tab."
+    )
+    return [], platform, msg
 
 
 # -----------------------------------------------------------------------------
@@ -409,34 +504,22 @@ def _get_session():
 
 
 def _scrape_flipkart_reviews(url):
-    """
-    Attempts to scrape customer reviews from a Flipkart product page.
-    Anti-bot (Cloudflare / E002) will block most cloud IP requests -
-    handled gracefully by returning an empty list, triggering the
-    product-specific fallback in fetch_product_reviews().
-    """
+    """Attempts to scrape customer reviews from a Flipkart product page."""
     try:
-        import requests
         from bs4 import BeautifulSoup
-        session = _get_session()
-        resp = session.get(url, timeout=12)
-        if resp.status_code != 200:
+        resp, err = safe_fetch_url(url, timeout=12)
+        if not resp or resp.status_code != 200:
             return []
         soup = BeautifulSoup(resp.text, "html.parser")
-        # Flipkart review containers (selectors may change with site updates)
-        review_blocks = soup.select("div.col.EPCmJX")
-        if not review_blocks:
-            review_blocks = soup.select("div._27M-vq") or soup.select("div.t-ZTKy")
+        review_blocks = soup.select("div.col.EPCmJX, div._27M-vq, div.t-ZTKy")
 
         reviews = []
-        for block in review_blocks[:20]:
-            text_tag = block.find("p")
-            if not text_tag:
-                text_tag = block.find("div", {"class": lambda c: c and "t-ZTKy" in (c or "")})
+        for block in review_blocks[:30]:
+            text_tag = block.find("p") or block.find("div", {"class": lambda c: c and "t-ZTKy" in (c or "")})
             if not text_tag or not text_tag.get_text(strip=True):
                 continue
             review_text = text_tag.get_text(separator=" ", strip=True)
-            if len(review_text) < 10:
+            if len(review_text) < 15:
                 continue
             rating_tag = block.find("div", {"class": lambda c: c and "XQDdHH" in (c or "")})
             rating = None
@@ -459,40 +542,41 @@ def _scrape_flipkart_reviews(url):
 
 
 def _scrape_amazon_reviews(url):
-    """
-    Attempts to scrape customer reviews from Amazon.
-    Most JS-rendered content won't appear in BS4 on cloud hosts.
-    """
+    """Attempts to scrape customer reviews from Amazon."""
     try:
-        import requests
         from bs4 import BeautifulSoup
+        from urllib.parse import urlparse
         reviews_url = url
-        if "/dp/" in url:
-            asin = re.search(r"/dp/([A-Z0-9]{10})", url)
-            if asin:
-                domain_match = re.search(r"(amazon\.[a-z\.]+)", url, re.IGNORECASE)
-                domain = domain_match.group(1) if domain_match else "amazon.in"
-                reviews_url = f"https://www.{domain}/product-reviews/{asin.group(1)}"
-        session = _get_session()
-        resp = session.get(reviews_url, timeout=12)
-        if resp.status_code != 200:
+        if "/dp/" in url or "/gp/product/" in url:
+            asin_match = re.search(r"/(?:dp|gp/product)/([A-Z0-9]{10})", url, re.IGNORECASE)
+            if asin_match:
+                parsed = urlparse(url)
+                netloc = parsed.netloc.lower()
+                clean_host = netloc[4:] if netloc.startswith("www.") else netloc
+                reviews_url = f"https://www.{clean_host}/product-reviews/{asin_match.group(1)}"
+
+        resp, err = safe_fetch_url(reviews_url, timeout=12)
+        if not resp or resp.status_code != 200:
             return []
         soup = BeautifulSoup(resp.text, "html.parser")
         review_divs = soup.select("div[data-hook='review']")
         reviews = []
-        for div in review_divs[:20]:
+        for div in review_divs[:30]:
             body = div.select_one("span[data-hook='review-body']")
             if not body:
                 continue
             review_text = body.get_text(separator=" ", strip=True)
-            if len(review_text) < 10:
+            if len(review_text) < 15:
                 continue
             rating = None
             rating_tag = div.select_one("i[data-hook='review-star-rating']")
             if rating_tag:
                 m = re.search(r"(\d+\.?\d*)", rating_tag.get_text())
                 if m:
-                    rating = float(m.group(1))
+                    try:
+                        rating = float(m.group(1))
+                    except Exception:
+                        pass
             author_tag = div.select_one("span.a-profile-name")
             author = author_tag.get_text(strip=True) if author_tag else "Amazon Customer"
             date_tag = div.select_one("span[data-hook='review-date']")
@@ -514,18 +598,16 @@ def _scrape_amazon_reviews(url):
 def _scrape_myntra_reviews(url):
     """Attempts to scrape reviews from a Myntra product page."""
     try:
-        import requests
         from bs4 import BeautifulSoup
-        session = _get_session()
-        resp = session.get(url, timeout=12)
-        if resp.status_code != 200:
+        resp, err = safe_fetch_url(url, timeout=12)
+        if not resp or resp.status_code != 200:
             return []
         soup = BeautifulSoup(resp.text, "html.parser")
         review_divs = soup.select("div.user-review-reviewTextWrapper, div.detailed-reviews-userReview")
         reviews = []
-        for div in review_divs[:20]:
+        for div in review_divs[:30]:
             review_text = div.get_text(separator=" ", strip=True)
-            if len(review_text) < 10:
+            if len(review_text) < 15:
                 continue
             reviews.append({
                 "review_text": review_text,
@@ -543,18 +625,16 @@ def _scrape_myntra_reviews(url):
 def _scrape_meesho_reviews(url):
     """Attempts to scrape reviews from a Meesho product page."""
     try:
-        import requests
         from bs4 import BeautifulSoup
-        session = _get_session()
-        resp = session.get(url, timeout=12)
-        if resp.status_code != 200:
+        resp, err = safe_fetch_url(url, timeout=12)
+        if not resp or resp.status_code != 200:
             return []
         soup = BeautifulSoup(resp.text, "html.parser")
         review_divs = soup.select("p.sc-eDvSVe, div[class*='review']")
         reviews = []
-        for div in review_divs[:20]:
+        for div in review_divs[:30]:
             review_text = div.get_text(separator=" ", strip=True)
-            if len(review_text) < 10:
+            if len(review_text) < 15:
                 continue
             reviews.append({
                 "review_text": review_text,
@@ -570,13 +650,11 @@ def _scrape_meesho_reviews(url):
 
 
 def _scrape_generic_reviews(url):
-    """Generic scraper for any e-commerce site - tries common review CSS patterns."""
+    """Generic scraper for e-commerce sites using common review CSS patterns."""
     try:
-        import requests
         from bs4 import BeautifulSoup
-        session = _get_session()
-        resp = session.get(url, timeout=12)
-        if resp.status_code != 200:
+        resp, err = safe_fetch_url(url, timeout=12)
+        if not resp or resp.status_code != 200:
             return []
         soup = BeautifulSoup(resp.text, "html.parser")
         selectors = [
@@ -587,9 +665,9 @@ def _scrape_generic_reviews(url):
         reviews = []
         for sel in selectors:
             divs = soup.select(sel)
-            for div in divs[:20]:
+            for div in divs[:30]:
                 review_text = div.get_text(separator=" ", strip=True)
-                if len(review_text) > 20:
+                if len(review_text) >= 15:
                     reviews.append({
                         "review_text": review_text,
                         "rating": None,
@@ -603,3 +681,4 @@ def _scrape_generic_reviews(url):
         return reviews
     except Exception:
         return []
+

@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const htmlElement = document.documentElement;
     const themeToggleBtn = document.getElementById("themeToggleBtn");
     
-    // Get stored theme or default to dark for 3D glassmorphic styling
+    // Get stored theme or default to dark
     const currentTheme = localStorage.getItem("theme") || "dark";
     htmlElement.setAttribute("data-theme", currentTheme);
     updateThemeButtonIcon(currentTheme);
@@ -46,30 +46,44 @@ document.addEventListener("DOMContentLoaded", function () {
             const count = reviewTextArea.value.length;
             charCounter.textContent = `${count} / 2000 chars`;
             
+            if (count >= 15) {
+                reviewTextArea.classList.remove("is-invalid");
+                if (validationFeedback) {
+                    validationFeedback.classList.add("d-none");
+                    validationFeedback.style.display = "none";
+                }
+            }
+            
             // Real-time character count badge update
             if (count > 0 && count < 15) {
-                charCounter.className = "badge bg-danger-subtle text-danger py-2 px-3 fw-medium";
+                charCounter.className = "badge bg-danger-subtle text-danger py-1.5 px-3 fw-medium ms-auto";
             } else if (count >= 15 && count <= 1800) {
-                charCounter.className = "badge bg-success-subtle text-success py-2 px-3 fw-medium";
+                charCounter.className = "badge bg-success-subtle text-success py-1.5 px-3 fw-medium ms-auto";
             } else if (count > 1800) {
-                charCounter.className = "badge bg-warning-subtle text-warning py-2 px-3 fw-medium";
+                charCounter.className = "badge bg-warning-subtle text-warning py-1.5 px-3 fw-medium ms-auto";
             } else {
-                charCounter.className = "badge bg-secondary-subtle text-secondary py-2 px-3 fw-medium";
+                charCounter.className = "badge bg-secondary-subtle text-secondary py-1.5 px-3 fw-medium ms-auto";
             }
         });
     }
 
     if (predictionForm) {
         predictionForm.addEventListener("submit", function (event) {
-            const reviewText = reviewTextArea.value.trim();
+            const reviewText = reviewTextArea ? reviewTextArea.value.trim() : "";
             
             if (reviewText.length < 15) {
                 event.preventDefault();
-                reviewTextArea.classList.add("is-invalid");
-                validationFeedback.style.display = "block";
+                if (reviewTextArea) reviewTextArea.classList.add("is-invalid");
+                if (validationFeedback) {
+                    validationFeedback.classList.remove("d-none");
+                    validationFeedback.style.display = "block";
+                }
             } else {
-                reviewTextArea.classList.remove("is-invalid");
-                if (validationFeedback) validationFeedback.style.display = "none";
+                if (reviewTextArea) reviewTextArea.classList.remove("is-invalid");
+                if (validationFeedback) {
+                    validationFeedback.classList.add("d-none");
+                    validationFeedback.style.display = "none";
+                }
                 // Show loading overlay
                 if (loadingOverlay) loadingOverlay.classList.remove("d-none");
             }
@@ -82,9 +96,14 @@ document.addEventListener("DOMContentLoaded", function () {
         btnClear.addEventListener("click", function () {
             reviewTextArea.value = "";
             reviewTextArea.classList.remove("is-invalid");
-            if (validationFeedback) validationFeedback.style.display = "none";
-            charCounter.textContent = "0 / 2000 chars";
-            charCounter.className = "badge bg-secondary-subtle text-secondary py-2 px-3 fw-medium";
+            if (validationFeedback) {
+                validationFeedback.classList.add("d-none");
+                validationFeedback.style.display = "none";
+            }
+            if (charCounter) {
+                charCounter.textContent = "0 / 2000 chars";
+                charCounter.className = "badge bg-secondary-subtle text-secondary py-1.5 px-3 fw-medium ms-auto";
+            }
         });
     }
 
@@ -102,7 +121,10 @@ document.addEventListener("DOMContentLoaded", function () {
             reviewTextArea.value = sampleGenuine;
             reviewTextArea.dispatchEvent(new Event("input"));
             reviewTextArea.classList.remove("is-invalid");
-            if (validationFeedback) validationFeedback.style.display = "none";
+            if (validationFeedback) {
+                validationFeedback.classList.add("d-none");
+                validationFeedback.style.display = "none";
+            }
         });
     }
 
@@ -111,7 +133,10 @@ document.addEventListener("DOMContentLoaded", function () {
             reviewTextArea.value = sampleFake;
             reviewTextArea.dispatchEvent(new Event("input"));
             reviewTextArea.classList.remove("is-invalid");
-            if (validationFeedback) validationFeedback.style.display = "none";
+            if (validationFeedback) {
+                validationFeedback.classList.add("d-none");
+                validationFeedback.style.display = "none";
+            }
         });
     }
 
@@ -132,7 +157,10 @@ document.addEventListener("DOMContentLoaded", function () {
         btnAmazonSample.addEventListener("click", function () {
             productUrlInput.value = sampleAmazon;
             productUrlInput.classList.remove("is-invalid");
-            if (urlValidationFeedback) urlValidationFeedback.style.display = "none";
+            if (urlValidationFeedback) {
+                urlValidationFeedback.classList.add("d-none");
+                urlValidationFeedback.style.display = "none";
+            }
         });
     }
 
@@ -140,7 +168,10 @@ document.addEventListener("DOMContentLoaded", function () {
         btnFlipkartSample.addEventListener("click", function () {
             productUrlInput.value = sampleFlipkart;
             productUrlInput.classList.remove("is-invalid");
-            if (urlValidationFeedback) urlValidationFeedback.style.display = "none";
+            if (urlValidationFeedback) {
+                urlValidationFeedback.classList.add("d-none");
+                urlValidationFeedback.style.display = "none";
+            }
         });
     }
 
@@ -148,7 +179,10 @@ document.addEventListener("DOMContentLoaded", function () {
         btnClearUrl.addEventListener("click", function () {
             productUrlInput.value = "";
             productUrlInput.classList.remove("is-invalid");
-            if (urlValidationFeedback) urlValidationFeedback.style.display = "none";
+            if (urlValidationFeedback) {
+                urlValidationFeedback.classList.add("d-none");
+                urlValidationFeedback.style.display = "none";
+            }
         });
     }
 
@@ -158,10 +192,16 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!urlVal.startsWith("http://") && !urlVal.startsWith("https://")) {
                 event.preventDefault();
                 productUrlInput.classList.add("is-invalid");
-                if (urlValidationFeedback) urlValidationFeedback.style.display = "block";
+                if (urlValidationFeedback) {
+                    urlValidationFeedback.classList.remove("d-none");
+                    urlValidationFeedback.style.display = "block";
+                }
             } else {
                 productUrlInput.classList.remove("is-invalid");
-                if (urlValidationFeedback) urlValidationFeedback.style.display = "none";
+                if (urlValidationFeedback) {
+                    urlValidationFeedback.classList.add("d-none");
+                    urlValidationFeedback.style.display = "none";
+                }
                 if (loadingOverlay) loadingOverlay.classList.remove("d-none");
             }
         });
@@ -400,46 +440,4 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // ----------------------------------------------------
-    // 9. Interactive 3D Card Tilt & Specular Lighting Engine
-    // ----------------------------------------------------
-    function init3DTiltEngine() {
-        const tiltCards = document.querySelectorAll("[data-tilt-3d]");
-        tiltCards.forEach(card => {
-            if (!card.querySelector(".tilt-glare")) {
-                const glare = document.createElement("div");
-                glare.className = "tilt-glare";
-                card.appendChild(glare);
-            }
-
-            card.addEventListener("mousemove", e => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-
-                const rotateX = ((y - centerY) / centerY) * -11;
-                const rotateY = ((x - centerX) / centerX) * 11;
-
-                card.style.transform = `perspective(1000px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) scale3d(1.02, 1.02, 1.02)`;
-
-                const glare = card.querySelector(".tilt-glare");
-                if (glare) {
-                    const gx = (x / rect.width) * 100;
-                    const gy = (y / rect.height) * 100;
-                    glare.style.background = `radial-gradient(circle at ${gx}% ${gy}%, rgba(255, 255, 255, 0.18), transparent 60%)`;
-                    glare.style.opacity = "1";
-                }
-            });
-
-            card.addEventListener("mouseleave", () => {
-                card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
-                const glare = card.querySelector(".tilt-glare");
-                if (glare) glare.style.opacity = "0";
-            });
-        });
-    }
-
-    init3DTiltEngine();
 });

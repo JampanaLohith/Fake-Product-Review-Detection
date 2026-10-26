@@ -1,16 +1,25 @@
 import os
 import json
 import sqlite3
+import logging
 import joblib
 import numpy as np
 import scipy.sparse
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 
+# Setup structured logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("VeriTrust")
+
 # Import our helper functions
-from model import preprocess_text, extract_dense_features, explain_prediction, extract_product_name, fetch_product_reviews, detect_platform
+from model import (
+    preprocess_text, extract_dense_features, explain_prediction,
+    extract_product_name, fetch_product_reviews, detect_platform, is_safe_url
+)
 
 app = Flask(__name__)
-app.secret_key = "fake_review_secret_key_for_flash"
+# Secret key configured via environment variable with development fallback
+app.secret_key = os.environ.get("SECRET_KEY", "fake_review_secret_key_for_flash")
 
 # Database path
 DB_PATH = "database.db"
@@ -182,19 +191,22 @@ def predict():
         
         # Log to Database
         conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO predictions (review_text, prediction_label, confidence, prob_fake, prob_genuine)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (review_text, prediction_label, confidence_pct, float(prob_fake), float(prob_genuine)))
-        conn.commit()
-        prediction_id = cursor.lastrowid
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO predictions (review_text, prediction_label, confidence, prob_fake, prob_genuine)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (review_text, prediction_label, confidence_pct, float(prob_fake), float(prob_genuine)))
+            conn.commit()
+            prediction_id = cursor.lastrowid
+        finally:
+            conn.close()
         
         return redirect(url_for('result', prediction_id=prediction_id))
         
     except Exception as e:
-        flash(f"An error occurred during prediction: {e}", "danger")
+        logger.error(f"Error during single review prediction: {e}", exc_info=True)
+        flash("An error occurred during prediction analysis. Please try again.", "danger")
         return redirect(url_for('index'))
 
 @app.route('/result/<int:prediction_id>')
@@ -207,8 +219,10 @@ def result(prediction_id):
             return redirect(url_for('index'))
             
     conn = get_db_connection()
-    row = conn.execute('SELECT * FROM predictions WHERE id = ?', (prediction_id,)).fetchone()
-    conn.close()
+    try:
+        row = conn.execute('SELECT * FROM predictions WHERE id = ?', (prediction_id,)).fetchone()
+    finally:
+        conn.close()
     
     if not row:
         flash("Prediction report not found.", "danger")
@@ -236,15 +250,17 @@ def predict_product():
         flash("Please enter a product URL to analyze.", "warning")
         return redirect(url_for('index'))
     
-    if not (product_url.startswith("http://") or product_url.startswith("https://")):
-        flash("Please enter a valid product URL starting with http:// or https://", "warning")
+    # SSRF Pre-validation
+    is_safe, err_msg = is_safe_url(product_url)
+    if not is_safe:
+        flash(f"Invalid or restricted URL: {err_msg}", "warning")
         return redirect(url_for('index'))
 
     try:
         product_name = extract_product_name(product_url)
         reviews, platform_name, error_msg = fetch_product_reviews(product_url, product_name)
         
-        # Strict Rule: No synthetic fallback reviews when 0 reviews extracted
+        # When 0 real reviews could be extracted, inform user truthfully
         if not reviews or len(reviews) == 0:
             flash(error_msg or f"Unable to fetch reviews from this {platform_name} product page.", "warning")
             return redirect(url_for('index'))
@@ -286,43 +302,46 @@ def predict_product():
             })
             
         total_reviews = len(reviews)
-        trust_score = round((genuine_count / total_reviews) * 100, 2)
+        trust_score = round((genuine_count / total_reviews) * 100, 2) if total_reviews > 0 else 0.0
         
         conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO product_analyses (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score))
-        analysis_id = cursor.lastrowid
-        
-        for pred in predictions_batch:
+        try:
+            cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO product_reviews (analysis_id, review_text, prediction_label, confidence, rating, author, date, verified, source)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (analysis_id, pred["review_text"], pred["prediction_label"], pred["confidence"], pred["rating"], pred["author"], pred["date"], pred["verified"], pred["source"]))
+                INSERT INTO product_analyses (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score))
+            analysis_id = cursor.lastrowid
             
-        conn.commit()
-        conn.close()
+            for pred in predictions_batch:
+                cursor.execute('''
+                    INSERT INTO product_reviews (analysis_id, review_text, prediction_label, confidence, rating, author, date, verified, source)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (analysis_id, pred["review_text"], pred["prediction_label"], pred["confidence"], pred["rating"], pred["author"], pred["date"], pred["verified"], pred["source"]))
+                
+            conn.commit()
+        finally:
+            conn.close()
         
         return redirect(url_for('product_result', analysis_id=analysis_id))
         
     except Exception as e:
-        flash(f"An error occurred during product review analysis: {e}", "danger")
+        logger.error(f"Error during product review analysis: {e}", exc_info=True)
+        flash("An error occurred while analyzing the product reviews. Please verify the URL and try again.", "danger")
         return redirect(url_for('index'))
 
 @app.route('/product_result/<int:analysis_id>')
 def product_result(analysis_id):
     conn = get_db_connection()
-    analysis = conn.execute('SELECT * FROM product_analyses WHERE id = ?', (analysis_id,)).fetchone()
-    
-    if not analysis:
+    try:
+        analysis = conn.execute('SELECT * FROM product_analyses WHERE id = ?', (analysis_id,)).fetchone()
+        if not analysis:
+            flash("Product analysis report not found.", "danger")
+            return redirect(url_for('index'))
+            
+        reviews = conn.execute('SELECT * FROM product_reviews WHERE analysis_id = ?', (analysis_id,)).fetchall()
+    finally:
         conn.close()
-        flash("Product analysis report not found.", "danger")
-        return redirect(url_for('index'))
-        
-    reviews = conn.execute('SELECT * FROM product_reviews WHERE analysis_id = ?', (analysis_id,)).fetchall()
-    conn.close()
     
     fake_reviews = [r for r in reviews if r['prediction_label'] == 'Fake']
     genuine_reviews = [r for r in reviews if r['prediction_label'] == 'Genuine']
@@ -347,67 +366,67 @@ def dashboard():
         load_ml_models()
         
     conn = get_db_connection()
-    
-    # 1. Total counts from predictions (single reviews)
-    stats = conn.execute('''
-        SELECT 
-            COUNT(*) as total_reviews,
-            SUM(CASE WHEN prediction_label = 'Fake' THEN 1 ELSE 0 END) as fake_count,
-            SUM(CASE WHEN prediction_label = 'Genuine' THEN 1 ELSE 0 END) as genuine_count
-        FROM predictions
-    ''').fetchone()
-    
-    single_total = stats['total_reviews'] or 0
-    single_fake = stats['fake_count'] or 0
-    single_genuine = stats['genuine_count'] or 0
-    
-    # 2. Total counts from product_analyses
-    prod_stats = conn.execute('''
-        SELECT 
-            COUNT(*) as total_products,
-            SUM(total_reviews) as total_prod_reviews,
-            SUM(fake_count) as total_prod_fake,
-            SUM(genuine_count) as total_prod_genuine,
-            AVG(trust_score) as avg_trust
-        FROM product_analyses
-    ''').fetchone()
-    
-    total_products = prod_stats['total_products'] or 0
-    prod_reviews = prod_stats['total_prod_reviews'] or 0
-    prod_fake = prod_stats['total_prod_fake'] or 0
-    prod_genuine = prod_stats['total_prod_genuine'] or 0
-    avg_trust_score = round(prod_stats['avg_trust'], 2) if prod_stats['avg_trust'] is not None else 0.0
-    
-    # Combined Totals
-    total_reviews = single_total + prod_reviews
-    fake_count = single_fake + prod_fake
-    genuine_count = single_genuine + prod_genuine
-    
-    # 3. Get last 10 predictions (single)
-    history_rows = conn.execute('''
-        SELECT id, review_text, prediction_label, confidence, created_at
-        FROM predictions
-        ORDER BY created_at DESC
-        LIMIT 10
-    ''').fetchall()
-    
-    # 4. Get last 5 product analyses
-    product_history = conn.execute('''
-        SELECT id, product_name, product_url, total_reviews, fake_count, genuine_count, trust_score, created_at
-        FROM product_analyses
-        ORDER BY created_at DESC
-        LIMIT 5
-    ''').fetchall()
-    
-    # 5. Last prediction info (for single review)
-    last_pred = conn.execute('''
-        SELECT review_text, prediction_label, confidence, created_at
-        FROM predictions
-        ORDER BY created_at DESC
-        LIMIT 1
-    ''').fetchone()
-    
-    conn.close()
+    try:
+        # 1. Total counts from predictions (single reviews)
+        stats = conn.execute('''
+            SELECT 
+                COUNT(*) as total_reviews,
+                SUM(CASE WHEN prediction_label = 'Fake' THEN 1 ELSE 0 END) as fake_count,
+                SUM(CASE WHEN prediction_label = 'Genuine' THEN 1 ELSE 0 END) as genuine_count
+            FROM predictions
+        ''').fetchone()
+        
+        single_total = (stats['total_reviews'] if stats else 0) or 0
+        single_fake = (stats['fake_count'] if stats else 0) or 0
+        single_genuine = (stats['genuine_count'] if stats else 0) or 0
+        
+        # 2. Total counts from product_analyses
+        prod_stats = conn.execute('''
+            SELECT 
+                COUNT(*) as total_products,
+                SUM(total_reviews) as total_prod_reviews,
+                SUM(fake_count) as total_prod_fake,
+                SUM(genuine_count) as total_prod_genuine,
+                AVG(trust_score) as avg_trust
+            FROM product_analyses
+        ''').fetchone()
+        
+        total_products = (prod_stats['total_products'] if prod_stats else 0) or 0
+        prod_reviews = (prod_stats['total_prod_reviews'] if prod_stats else 0) or 0
+        prod_fake = (prod_stats['total_prod_fake'] if prod_stats else 0) or 0
+        prod_genuine = (prod_stats['total_prod_genuine'] if prod_stats else 0) or 0
+        avg_trust_score = round(prod_stats['avg_trust'], 2) if (prod_stats and prod_stats['avg_trust'] is not None) else 0.0
+        
+        # Combined Totals
+        total_reviews = single_total + prod_reviews
+        fake_count = single_fake + prod_fake
+        genuine_count = single_genuine + prod_genuine
+        
+        # 3. Get last 10 predictions (single)
+        history_rows = conn.execute('''
+            SELECT id, review_text, prediction_label, confidence, created_at
+            FROM predictions
+            ORDER BY created_at DESC
+            LIMIT 10
+        ''').fetchall()
+        
+        # 4. Get last 5 product analyses
+        product_history = conn.execute('''
+            SELECT id, product_name, product_url, total_reviews, fake_count, genuine_count, trust_score, created_at
+            FROM product_analyses
+            ORDER BY created_at DESC
+            LIMIT 5
+        ''').fetchall()
+        
+        # 5. Last prediction info (for single review)
+        last_pred = conn.execute('''
+            SELECT review_text, prediction_label, confidence, created_at
+            FROM predictions
+            ORDER BY created_at DESC
+            LIMIT 1
+        ''').fetchone()
+    finally:
+        conn.close()
     
     # Setup accuracy/model name
     model_name = model_metadata.get('best_model_name', 'Logistic Regression')
@@ -438,16 +457,18 @@ def dashboard():
 
 @app.route('/api/clear_history', methods=['POST'])
 def clear_history():
+    conn = get_db_connection()
     try:
-        conn = get_db_connection()
         conn.execute('DELETE FROM predictions')
         conn.execute('DELETE FROM product_analyses')
         conn.execute('DELETE FROM product_reviews')
         conn.commit()
-        conn.close()
         return jsonify({"status": "success", "message": "All history logs cleared successfully."})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        logger.error(f"Error clearing history logs: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": "Failed to clear history logs."}), 500
+    finally:
+        conn.close()
 
 @app.route('/report')
 def report():
@@ -467,7 +488,7 @@ def health():
 def api_analyze():
     """
     JSON API endpoint: accepts { "review": "..." } and returns prediction.
-    Useful for integration testing and interview demonstrations.
+    Useful for integration testing and external consumers.
     """
     global model, vectorizer, scaler, models_loaded
     if not models_loaded:
@@ -476,7 +497,7 @@ def api_analyze():
             return jsonify({"error": "ML models not loaded. Run train_model.py first."}), 503
 
     data = request.get_json(force=True, silent=True)
-    if not data or 'review' not in data:
+    if not isinstance(data, dict) or 'review' not in data:
         return jsonify({"error": "Provide JSON body: {\"review\": \"<text>\"}"}), 400
 
     review_text = str(data['review']).strip()
@@ -502,7 +523,8 @@ def api_analyze():
             "disclaimer": "ML predictions are based on patterns learned from training data and are not absolute proof of review authenticity."
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error in api_analyze: {e}", exc_info=True)
+        return jsonify({"error": "An internal error occurred during review analysis."}), 500
 
 if __name__ == '__main__':
     # Initialize DB and print network access URLs
@@ -519,4 +541,6 @@ if __name__ == '__main__':
         print("="*70 + "\n")
     except Exception:
         pass
-    app.run(debug=True, use_reloader=False, host='0.0.0.0', port=5000)
+    debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() in ("true", "1")
+    app.run(debug=debug_mode, use_reloader=False, host='0.0.0.0', port=5000)
+
