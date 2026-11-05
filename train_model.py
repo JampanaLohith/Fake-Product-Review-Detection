@@ -178,101 +178,132 @@ def main():
     # 2. Extract Features
     print("Preprocessing text reviews and extracting dense features...")
     
-    # 2. Train-Test Split (80/20) BEFORE fitting Vectorizer or Scaler to prevent Data Leakage
+    # 2. Train-Validation-Test Split (70% Train, 15% Validation, 15% Test)
+    # Stratified to preserve class distribution across all splits without leakage
     raw_reviews = df['review'].values
     y_all = df['label'].values
     
-    X_train_raw, X_test_raw, y_train, y_test = train_test_split(
-        raw_reviews, y_all, test_size=0.20, random_state=42, stratify=y_all
+    # First split: 70% Train, 30% Temp (Val + Test)
+    X_train_raw, X_temp_raw, y_train, y_temp = train_test_split(
+        raw_reviews, y_all, test_size=0.30, random_state=42, stratify=y_all
+    )
+    # Second split: Split Temp 50/50 -> 15% Validation, 15% Independent Test
+    X_val_raw, X_test_raw, y_val, y_test = train_test_split(
+        X_temp_raw, y_temp, test_size=0.50, random_state=42, stratify=y_temp
     )
     
+    print(f"Splits: Train = {len(X_train_raw)} (70%), Validation = {len(X_val_raw)} (15%), Test = {len(X_test_raw)} (15%)")
+    
     # 3. Fit Vectorizer and Scaler STRICTLY on Training Set
-    print("Preprocessing training text and fitting TF-IDF Vectorizer...")
+    print("Preprocessing training text and fitting TF-IDF Vectorizer (unigrams + bigrams)...")
     train_cleaned = [preprocess_text(r) for r in X_train_raw]
+    val_cleaned = [preprocess_text(r) for r in X_val_raw]
     test_cleaned = [preprocess_text(r) for r in X_test_raw]
     
-    vectorizer = TfidfVectorizer(ngram_range=(1, 2), min_df=2, sublinear_tf=True)
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2), min_df=2, max_df=0.90, sublinear_tf=True)
     X_train_tfidf = vectorizer.fit_transform(train_cleaned)
+    X_val_tfidf = vectorizer.transform(val_cleaned)
     X_test_tfidf = vectorizer.transform(test_cleaned)
     
-    # Extract dense features and fit StandardScaler strictly on training set
+    # Extract dense features with log-dampening and fit StandardScaler strictly on training set
     print("Extracting dense stylometric features and fitting StandardScaler...")
     dense_train = np.vstack([extract_dense_features(r) for r in X_train_raw])
+    dense_val = np.vstack([extract_dense_features(r) for r in X_val_raw])
     dense_test = np.vstack([extract_dense_features(r) for r in X_test_raw])
     
     scaler = StandardScaler()
     X_train_dense = scaler.fit_transform(dense_train)
+    X_val_dense = scaler.transform(dense_val)
     X_test_dense = scaler.transform(dense_test)
     
     # Combine sparse TF-IDF and dense features
     X_train = scipy.sparse.hstack([X_train_tfidf, X_train_dense])
+    X_val = scipy.sparse.hstack([X_val_tfidf, X_val_dense])
     X_test = scipy.sparse.hstack([X_test_tfidf, X_test_dense])
     
-    # 4. Train & Evaluate Models
-    print("Training Logistic Regression model...")
-    lr_model = LogisticRegression(max_iter=1000, random_state=42)
+    # 4. Train Models
+    print("Training Candidate Primary Classifier (Random Forest, n=100)...")
+    rf_model = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=20, min_samples_split=4)
+    rf_model.fit(X_train, y_train)
+    
+    print("Training Baseline Comparator (Logistic Regression)...")
+    lr_model = LogisticRegression(max_iter=1000, random_state=42, C=1.0)
     lr_model.fit(X_train, y_train)
     
-    # Logistic Regression Evaluation
+    # 5. Evaluate on Validation Set to Check Uncertainty Calibration
+    val_probs_rf = rf_model.predict_proba(X_val)[:, 1]
+    val_uncertain_mask = (val_probs_rf > 0.40) & (val_probs_rf < 0.60)
+    print(f"Validation Uncertainty Range (40%-60%): {val_uncertain_mask.sum()} / {len(y_val)} borderline reviews ({val_uncertain_mask.sum()/len(y_val)*100:.1f}%)")
+    
+    # 6. Evaluate on Independent Held-Out Test Set (15%)
+    from sklearn.metrics import roc_auc_score
+    
+    # Random Forest Test Metrics
+    y_pred_rf = rf_model.predict(X_test)
+    y_prob_rf = rf_model.predict_proba(X_test)[:, 1]
+    acc_rf = accuracy_score(y_test, y_pred_rf)
+    prec_rf, rec_rf, f1_rf, _ = precision_recall_fscore_support(y_test, y_pred_rf, average='binary', zero_division=0)
+    roc_rf = roc_auc_score(y_test, y_prob_rf)
+    cm_rf = confusion_matrix(y_test, y_pred_rf).tolist()
+    
+    # Logistic Regression Test Metrics
     y_pred_lr = lr_model.predict(X_test)
     y_prob_lr = lr_model.predict_proba(X_test)[:, 1]
     acc_lr = accuracy_score(y_test, y_pred_lr)
-    prec_lr, rec_lr, f1_lr, _ = precision_recall_fscore_support(y_test, y_pred_lr, average='binary')
-    cm_lr = confusion_matrix(y_test, y_pred_lr).tolist() # [[TN, FP], [FN, TP]]
+    prec_lr, rec_lr, f1_lr, _ = precision_recall_fscore_support(y_test, y_pred_lr, average='binary', zero_division=0)
+    roc_lr = roc_auc_score(y_test, y_prob_lr)
+    cm_lr = confusion_matrix(y_test, y_pred_lr).tolist()
     
-    print(f"Logistic Regression Test Accuracy (Data Leakage Fixed): {acc_lr:.4f}")
-    
-    print("Training Random Forest model (for comparison)...")
-    rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-    rf_model.fit(X_train, y_train)
-    
-    # Random Forest Evaluation
-    y_pred_rf = rf_model.predict(X_test)
-    acc_rf = accuracy_score(y_test, y_pred_rf)
-    prec_rf, rec_rf, f1_rf, _ = precision_recall_fscore_support(y_test, y_pred_rf, average='binary')
-    cm_rf = confusion_matrix(y_test, y_pred_rf).tolist()
-    
-    print(f"Random Forest Test Accuracy: {acc_rf:.4f}")
-    
-    # 5. Select Best Model
-    best_model_name = "Logistic Regression" if acc_lr >= acc_rf else "Random Forest"
-    best_model = lr_model if acc_lr >= acc_rf else rf_model
-    print(f"Best model selected: {best_model_name}")
+    print(f"\n--- Independent Held-Out Test Set Results ---")
+    print(f"Random Forest (Primary):     Accuracy={acc_rf:.4f}, F1={f1_rf:.4f}, Precision={prec_rf:.4f}, Recall={rec_rf:.4f}, ROC-AUC={roc_rf:.4f}")
+    print(f"Logistic Regression (Base):  Accuracy={acc_lr:.4f}, F1={f1_lr:.4f}, Precision={prec_lr:.4f}, Recall={rec_lr:.4f}, ROC-AUC={roc_lr:.4f}")
     
     # Cross Validation on Training Split
-    cv_scores = cross_val_score(lr_model, X_train, y_train, cv=5)
+    cv_scores = cross_val_score(rf_model, X_train, y_train, cv=5)
     cv_mean = cv_scores.mean()
-    print(f"5-Fold Cross Validation Accuracy (Training Split): {cv_mean:.4f} (+/- {cv_scores.std():.4f})")
+    print(f"5-Fold CV Accuracy (Random Forest): {cv_mean:.4f} (+/- {cv_scores.std():.4f})")
     
-    # 6. Save Models and Metadata
+    # 7. Save Models and Metadata
     print("Saving pickles to disk...")
-    # Logistic Regression is saved as primary model.pkl for explainability coefficients and interpretability
-    joblib.dump(lr_model, "model.pkl")
+    # Random Forest is saved as primary model.pkl for prediction accuracy and robust non-linear boundaries
+    joblib.dump(rf_model, "model.pkl")
+    joblib.dump(rf_model, "rf_model.pkl")
+    # Logistic Regression is saved as baseline and explainer model
+    joblib.dump(lr_model, "lr_model.pkl")
     joblib.dump(vectorizer, "vectorizer.pkl")
     joblib.dump(scaler, "scaler.pkl")
     
-    # Save training metadata for the web dashboard display
     metadata = {
-        "best_model_name": best_model_name,
-        "logistic_regression": {
-            "accuracy": float(acc_lr),
-            "precision": float(prec_lr),
-            "recall": float(rec_lr),
-            "f1_score": float(f1_lr),
-            "confusion_matrix": cm_lr,
-            "cv_mean": float(cv_mean)
-        },
+        "primary_model_name": "Random Forest",
+        "baseline_model_name": "Logistic Regression",
         "random_forest": {
             "accuracy": float(acc_rf),
             "precision": float(prec_rf),
             "recall": float(rec_rf),
             "f1_score": float(f1_rf),
-            "confusion_matrix": cm_rf
+            "roc_auc": float(roc_rf),
+            "confusion_matrix": cm_rf,
+            "cv_mean": float(cv_mean)
+        },
+        "logistic_regression": {
+            "accuracy": float(acc_lr),
+            "precision": float(prec_lr),
+            "recall": float(rec_lr),
+            "f1_score": float(f1_lr),
+            "roc_auc": float(roc_lr),
+            "confusion_matrix": cm_lr
         },
         "dataset_stats": {
             "total_reviews": int(df.shape[0]),
             "genuine_count": int((df['label'] == 0).sum()),
-            "fake_count": int((df['label'] == 1).sum())
+            "fake_count": int((df['label'] == 1).sum()),
+            "train_samples": len(X_train_raw),
+            "val_samples": len(X_val_raw),
+            "test_samples": len(X_test_raw)
+        },
+        "uncertainty_thresholds": {
+            "lower_bound": 0.40,
+            "upper_bound": 0.60
         }
     }
     

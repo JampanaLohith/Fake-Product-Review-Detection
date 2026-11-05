@@ -110,9 +110,6 @@
                             <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('productUrlInput').focus(); window.scrollTo({top: document.getElementById('analyzer').offsetTop - 50, behavior: 'smooth'});">
                                 <i class="bi bi-arrow-repeat me-1"></i> Retry Product URL
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('manualAnalyzerSection').scrollIntoView({behavior: 'smooth'}); document.getElementById('reviewTextArea').focus();">
-                                <i class="bi bi-pencil-square me-1"></i> Submit Review Text Manually
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -205,69 +202,6 @@
             </div>
         </div>
 
-        <!-- Manual Review Submission Section (Fallback / Direct Text Mode) -->
-        <div id="manualAnalyzerSection" class="mb-5 pb-2">
-            <div class="card border">
-                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="icon-box">
-                            <i class="bi bi-pencil-square"></i>
-                        </div>
-                        <div>
-                            <h5 class="mb-0 fw-semibold">Manual Customer Review Analyzer</h5>
-                            <small class="text-secondary">Directly analyze text when platform anti-bot prevents URL scraping</small>
-                        </div>
-                    </div>
-                    <span class="badge border border-dark text-black bg-white">
-                        <i class="bi bi-person-check me-1"></i> Manual Input Mode
-                    </span>
-                </div>
-
-                <div class="card-body p-4">
-                    <form id="predictionForm" action="{{ url_for('predict') }}" method="POST">
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label for="reviewTextArea" class="form-label fw-medium text-secondary mb-0 small text-uppercase" style="letter-spacing: 0.04em;">
-                                    Paste Customer Review Text <span class="text-danger">*</span>
-                                </label>
-                                <span id="charCounter" class="badge text-secondary py-1 px-2 fw-medium">0 / 2000 chars</span>
-                            </div>
-                            <textarea class="form-control" 
-                                      id="reviewTextArea" 
-                                      name="review" 
-                                      rows="4" 
-                                      placeholder="Paste any customer review text copied directly from an e-commerce page (minimum 15 characters)..." 
-                                      maxlength="2000" 
-                                      required></textarea>
-                            <div class="invalid-feedback mt-2 text-danger d-none" id="validationFeedback">
-                                Please write at least 15 characters for a reliable classification.
-                            </div>
-                        </div>
-
-                        <!-- Sample Presets & Controls -->
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-2 border-top">
-                            <div class="d-flex gap-2 flex-wrap align-items-center">
-                                <span class="small text-muted">Test Presets:</span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-3" id="btnGenuineSample">
-                                    <i class="bi bi-check-circle me-1"></i> Genuine Review Sample
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-3" id="btnFakeSample">
-                                    <i class="bi bi-x-octagon me-1"></i> Fake Spam Sample
-                                </button>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-link text-secondary" id="btnClear">
-                                    <i class="bi bi-trash3 me-1"></i> Clear
-                                </button>
-                                <button type="submit" class="btn btn-primary btn-sm px-4" id="btnSubmit">
-                                    <i class="bi bi-cpu me-1"></i> Analyze Text
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
 
         <!-- Feature Grid: Pipeline Architecture -->
         <div class="py-4 mb-4">

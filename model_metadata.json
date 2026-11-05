@@ -1,41 +1,51 @@
 {
-    "best_model_name": "Logistic Regression",
-    "logistic_regression": {
-        "accuracy": 1.0,
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1_score": 1.0,
-        "confusion_matrix": [
-            [
-                85,
-                0
-            ],
-            [
-                0,
-                96
-            ]
-        ],
-        "cv_mean": 1.0
-    },
+    "primary_model_name": "Random Forest",
+    "baseline_model_name": "Logistic Regression",
     "random_forest": {
         "accuracy": 1.0,
         "precision": 1.0,
         "recall": 1.0,
         "f1_score": 1.0,
+        "roc_auc": 1.0,
         "confusion_matrix": [
             [
-                85,
+                70,
                 0
             ],
             [
                 0,
-                96
+                76
+            ]
+        ],
+        "cv_mean": 0.9955773420479304
+    },
+    "logistic_regression": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "roc_auc": 1.0,
+        "confusion_matrix": [
+            [
+                70,
+                0
+            ],
+            [
+                0,
+                76
             ]
         ]
     },
     "dataset_stats": {
-        "total_reviews": 904,
-        "genuine_count": 424,
-        "fake_count": 480
+        "total_reviews": 969,
+        "genuine_count": 464,
+        "fake_count": 505,
+        "train_samples": 678,
+        "val_samples": 145,
+        "test_samples": 146
+    },
+    "uncertainty_thresholds": {
+        "lower_bound": 0.4,
+        "upper_bound": 0.6
     }
 }

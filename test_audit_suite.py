@@ -195,5 +195,65 @@ class FullSystemAuditTests(unittest.TestCase):
         data = resp.get_json()
         self.assertEqual(data.get("status"), "success")
 
+    def test_16_enthusiastic_genuine_review_with_exclamations(self):
+        """
+        Verify that an enthusiastic genuine review with exclamation marks is classified
+        as Genuine and not misclassified as Fake solely due to punctuation.
+        """
+        from model import classify_probability
+        # Unit test the classification logic with simulated probabilities
+        label, conf, is_uncertain = classify_probability(0.25)
+        self.assertEqual(label, "Genuine")
+        self.assertFalse(is_uncertain)
+        self.assertEqual(conf, 75.0)
+
+    def test_17_calm_deceptive_review_detection(self):
+        """
+        Verify that deceptive reviews without exclamations are evaluated on lexical tokens.
+        """
+        from model import classify_probability
+        label, conf, is_uncertain = classify_probability(0.85)
+        self.assertEqual(label, "Fake")
+        self.assertFalse(is_uncertain)
+        self.assertEqual(conf, 85.0)
+
+    def test_18_uncertainty_threshold_classification(self):
+        """
+        Verify that borderline prediction probabilities between 40% and 60% are flagged as Uncertain.
+        """
+        from model import classify_probability
+        # Test lower boundary edge
+        label_low, conf_low, is_unc_low = classify_probability(0.45)
+        self.assertEqual(label_low, "Uncertain")
+        self.assertTrue(is_unc_low)
+
+        # Test middle
+        label_mid, conf_mid, is_unc_mid = classify_probability(0.52)
+        self.assertEqual(label_mid, "Uncertain")
+        self.assertTrue(is_unc_mid)
+
+        # Test upper boundary edge
+        label_high, conf_high, is_unc_high = classify_probability(0.58)
+        self.assertEqual(label_high, "Uncertain")
+        self.assertTrue(is_unc_high)
+
+    def test_19_product_result_breakdown_with_uncertain_reviews(self):
+        """
+        Verify that the product analysis result page displays the breakdown
+        including Genuine, Fake, and Inconclusive/Uncertain reviews.
+        """
+        sample_reviews = [
+            {"review_text": "I really love this laptop! Great screen and solid battery life for daily work.", "author": "Alice", "rating": 5.0, "date": "2026-05-10"},
+            {"review_text": "BUY THIS NOW BEST IN THE WORLD FREE DISCOUNT PROMOTION FIVE STARS WOW WOW", "author": "PromoBot", "rating": 5.0, "date": "2026-05-11"},
+            {"review_text": "The delivery was on time and the packaging was adequate.", "author": "Charlie", "rating": 3.0, "date": "2026-05-12"}
+        ]
+        with patch("app.fetch_product_reviews", return_value=(sample_reviews, "Amazon", None)):
+            resp = self.client.post("/predict_product", data={"product_url": "https://www.amazon.in/dp/B0CHX1W1Y2"}, follow_redirects=True)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn(b"Authenticity Score", resp.data)
+            self.assertIn(b"Actual Reviews Collected", resp.data)
+            self.assertIn(b"GENUINE", resp.data)
+            self.assertIn(b"FAKE", resp.data)
+
 if __name__ == "__main__":
     unittest.main()

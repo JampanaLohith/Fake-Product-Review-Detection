@@ -197,68 +197,24 @@
 
         <!-- 3. Logs Tables & History -->
         <div class="row g-4 mb-4">
-            <!-- Left: Single Review Logs -->
-            <div class="col-lg-6">
+            <!-- Product URL Logs -->
+            <div class="col-12">
                 <div class="card h-100">
                     <div class="card-body p-4">
-                        <h5 class="fw-semibold mb-3 fs-6 text-color">Recent Single Review Logs</h5>
-                        
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0" style="font-size: 0.85rem;">
-                                <thead>
-                                    <tr>
-                                        <th scope="col" style="width: 15%;">ID</th>
-                                        <th scope="col" style="width: 50%;">Review Snippet</th>
-                                        <th scope="col" style="width: 20%;">Verdict</th>
-                                        <th scope="col" style="width: 15%;">Conf</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for row in history[:5] %}
-                                        <tr>
-                                            <td class="text-secondary">#{{ row.id }}</td>
-                                            <td>
-                                                <a href="{{ url_for('result', prediction_id=row.id) }}" class="text-decoration-none text-color text-truncate d-inline-block" style="max-width: 200px;" title="View Report">
-                                                    {{ row.review_text[:35] }}{% if (row.review_text | length) > 35 %}...{% endif %}
-                                                </a>
-                                            </td>
-                                            <td>
-                                                {% if row.prediction_label == 'Fake' %}
-                                                    <span class="badge bg-black text-white" style="font-size: 0.65rem;">FAKE</span>
-                                                {% else %}
-                                                    <span class="badge border border-dark text-black" style="font-size: 0.65rem;">GENUINE</span>
-                                                {% endif %}
-                                            </td>
-                                            <td class="text-secondary">{{ row.confidence }}%</td>
-                                        </tr>
-                                    {% else %}
-                                        <tr>
-                                            <td colspan="4" class="text-center text-secondary py-4 small">
-                                                No single predictions recorded yet.
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-semibold mb-0 fs-6 text-color">Recent Product Analysis Logs</h5>
+                            <span class="badge border border-dark text-black bg-white">E-Commerce URL Verifications</span>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right: Product URL Logs -->
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-body p-4">
-                        <h5 class="fw-semibold mb-3 fs-6 text-color">Recent Product Link Logs</h5>
                         
                         <div class="table-responsive">
                             <table class="table align-middle mb-0" style="font-size: 0.85rem;">
                                 <thead>
                                     <tr>
-                                        <th scope="col" style="width: 15%;">ID</th>
-                                        <th scope="col" style="width: 50%;">Product Title</th>
-                                        <th scope="col" style="width: 20%;">Trust Score</th>
-                                        <th scope="col" style="width: 15%;">Reviews</th>
+                                        <th scope="col" style="width: 10%;">ID</th>
+                                        <th scope="col" style="width: 45%;">Product Title</th>
+                                        <th scope="col" style="width: 15%;">Platform</th>
+                                        <th scope="col" style="width: 15%;">Trust Score</th>
+                                        <th scope="col" style="width: 15%;">Reviews Analyzed</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -266,19 +222,28 @@
                                         <tr>
                                             <td class="text-secondary">#P{{ row.id }}</td>
                                             <td>
-                                                <a href="{{ url_for('product_result', analysis_id=row.id) }}" class="text-decoration-none text-color text-truncate d-inline-block" style="max-width: 200px;" title="View Product Report">
+                                                <a href="{{ url_for('product_result', analysis_id=row.id) }}" class="text-decoration-none text-color fw-medium text-truncate d-inline-block" style="max-width: 320px;" title="View Product Report">
                                                     {{ row.product_name }}
                                                 </a>
                                             </td>
                                             <td>
-                                                <span class="fw-medium text-color">{{ row.trust_score }}%</span>
+                                                <span class="badge bg-secondary-subtle text-color">{{ row.platform or 'E-Commerce' }}</span>
                                             </td>
-                                            <td><span class="badge">{{ row.total_reviews }}</span></td>
+                                            <td>
+                                                {% if row.trust_score >= 70 %}
+                                                    <span class="badge bg-black text-white">{{ row.trust_score }}% Trust</span>
+                                                {% elif row.trust_score >= 40 %}
+                                                    <span class="badge border border-dark text-black">{{ row.trust_score }}% Trust</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger text-white">{{ row.trust_score }}% Trust</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><span class="badge border">{{ row.total_reviews }} reviews</span></td>
                                         </tr>
                                     {% else %}
                                         <tr>
-                                            <td colspan="4" class="text-center text-secondary py-4 small">
-                                                No product analyses logged yet.
+                                            <td colspan="5" class="text-center text-secondary py-4 small">
+                                                No product analyses logged yet. Enter a product URL on the homepage to start analyzing reviews.
                                             </td>
                                         </tr>
                                     {% endfor %}

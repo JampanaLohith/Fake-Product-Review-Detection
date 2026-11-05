@@ -13,7 +13,7 @@ logger = logging.getLogger("VeriTrust")
 
 # Import our helper functions
 from model import (
-    preprocess_text, extract_dense_features, explain_prediction,
+    preprocess_text, extract_dense_features, explain_prediction, classify_probability,
     extract_product_name, fetch_product_reviews, detect_platform, is_safe_url
 )
 
@@ -81,6 +81,7 @@ def _migrate_db(conn):
     migrations = [
         ("product_analyses", "platform_name",     "TEXT DEFAULT 'E-Commerce'"),
         ("product_analyses", "extraction_status", "TEXT DEFAULT 'Live Scraped (Verified)'"),
+        ("product_analyses", "uncertain_count",   "INTEGER DEFAULT 0"),
         ("predictions",      "source",            "TEXT DEFAULT 'Manual Review Submission'"),
         ("product_reviews",  "rating",            "REAL"),
         ("product_reviews",  "author",            "TEXT"),
@@ -100,13 +101,14 @@ init_db()
 
 # Global variables for models
 model = None
+lr_model = None
 vectorizer = None
 scaler = None
 model_metadata = {}
 
 def load_ml_models():
     """Loads pickles and metadata, returns True if successful, False otherwise."""
-    global model, vectorizer, scaler, model_metadata
+    global model, lr_model, vectorizer, scaler, model_metadata
     try:
         if (os.path.exists("model.pkl") and 
             os.path.exists("vectorizer.pkl") and 
@@ -116,14 +118,18 @@ def load_ml_models():
             vectorizer = joblib.load("vectorizer.pkl")
             scaler = joblib.load("scaler.pkl")
             
+            if os.path.exists("lr_model.pkl"):
+                lr_model = joblib.load("lr_model.pkl")
+            else:
+                lr_model = model
+            
             if os.path.exists("model_metadata.json"):
                 with open("model_metadata.json", "r") as f:
                     model_metadata = json.load(f)
             else:
                 model_metadata = {
-                    "best_model_name": "Logistic Regression",
-                    "logistic_regression": {"accuracy": 0.95},
-                    "random_forest": {"accuracy": 0.93}
+                    "primary_model_name": "Random Forest",
+                    "baseline_model_name": "Logistic Regression"
                 }
             return True
         return False
@@ -183,13 +189,11 @@ def predict():
         
         # Predict probability
         prob = model.predict_proba(X_combined)[0] # [P(0=Genuine), P(1=Fake)]
-        prob_genuine = prob[0]
-        prob_fake = prob[1]
+        prob_genuine = float(prob[0])
+        prob_fake = float(prob[1])
         
-        # Get label
-        prediction_label = "Fake" if prob_fake >= 0.50 else "Genuine"
-        confidence = prob_fake if prediction_label == "Fake" else prob_genuine
-        confidence_pct = round(confidence * 100, 2)
+        # Classify with 40%-60% uncertainty range
+        prediction_label, confidence_pct, is_uncertain = classify_probability(prob_fake, lower_thresh=0.40, upper_thresh=0.60)
         
         # Log to Database
         conn = get_db_connection()
@@ -230,9 +234,9 @@ def result(prediction_id):
         flash("Prediction report not found.", "danger")
         return redirect(url_for('index'))
         
-    # Generate Explanation
+    # Generate Explanation using Logistic Regression linear weights
     review_text = row['review_text']
-    explanation = explain_prediction(review_text, model, vectorizer, scaler)
+    explanation = explain_prediction(review_text, lr_model or model, vectorizer, scaler)
     
     return render_template('result.html', prediction=row, explanation=explanation)
 
@@ -287,6 +291,7 @@ def predict_product():
             
         fake_count = 0
         genuine_count = 0
+        uncertain_count = 0
         predictions_batch = []
         
         for r_item in reviews:
@@ -298,17 +303,17 @@ def predict_product():
             X_combined = scipy.sparse.hstack([tfidf_feat, dense_scaled])
             
             prob = model.predict_proba(X_combined)[0]
-            prob_genuine = prob[0]
-            prob_fake = prob[1]
+            prob_genuine = float(prob[0])
+            prob_fake = float(prob[1])
             
-            prediction_label = "Fake" if prob_fake >= 0.50 else "Genuine"
-            confidence = prob_fake if prediction_label == "Fake" else prob_genuine
-            confidence_pct = round(confidence * 100, 2)
+            prediction_label, confidence_pct, is_uncertain = classify_probability(prob_fake, lower_thresh=0.40, upper_thresh=0.60)
             
             if prediction_label == "Fake":
                 fake_count += 1
-            else:
+            elif prediction_label == "Genuine":
                 genuine_count += 1
+            else:
+                uncertain_count += 1
                 
             predictions_batch.append({
                 "review_text": r_text,
@@ -328,9 +333,9 @@ def predict_product():
         try:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO product_analyses (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score, extraction_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score, 'Live Scraped (Verified)'))
+                INSERT INTO product_analyses (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, uncertain_count, trust_score, extraction_status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, uncertain_count, trust_score, 'Live Scraped (Verified)'))
             analysis_id = cursor.lastrowid
             
             for pred in predictions_batch:
@@ -365,9 +370,11 @@ def product_result(analysis_id):
     
     fake_reviews = [r for r in reviews if r['prediction_label'] == 'Fake']
     genuine_reviews = [r for r in reviews if r['prediction_label'] == 'Genuine']
+    uncertain_reviews = [r for r in reviews if r['prediction_label'] == 'Uncertain']
     
     total = analysis['total_reviews']
     fake_pct = round((analysis['fake_count'] / total) * 100, 2) if total > 0 else 0.0
+    uncertain_pct = round((len(uncertain_reviews) / total) * 100, 2) if total > 0 else 0.0
     
     return render_template(
         'product_result.html',
@@ -375,7 +382,9 @@ def product_result(analysis_id):
         reviews=reviews,
         fake_reviews=fake_reviews,
         genuine_reviews=genuine_reviews,
-        fake_pct=fake_pct
+        uncertain_reviews=uncertain_reviews,
+        fake_pct=fake_pct,
+        uncertain_pct=uncertain_pct
     )
 
 @app.route('/dashboard')
@@ -533,14 +542,14 @@ def api_analyze():
         prob = model.predict_proba(X_combined)[0]
         prob_genuine = float(prob[0])
         prob_fake = float(prob[1])
-        prediction_label = "Fake" if prob_fake >= 0.50 else "Genuine"
-        confidence = prob_fake if prediction_label == "Fake" else prob_genuine
+        prediction_label, confidence_pct, is_uncertain = classify_probability(prob_fake, lower_thresh=0.40, upper_thresh=0.60)
         return jsonify({
             "prediction": prediction_label,
-            "confidence_pct": round(confidence * 100, 2),
+            "confidence_pct": confidence_pct,
+            "is_uncertain": is_uncertain,
             "prob_fake": round(prob_fake, 4),
             "prob_genuine": round(prob_genuine, 4),
-            "disclaimer": "ML predictions are based on patterns learned from training data and are not absolute proof of review authenticity."
+            "disclaimer": "Predictions in the 40%-60% probability range reflect inconclusive linguistic evidence."
         })
     except Exception as e:
         logger.error(f"Error in api_analyze: {e}", exc_info=True)

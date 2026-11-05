@@ -94,9 +94,11 @@
                             <div class="text-uppercase small fw-semibold text-secondary tracking-wide mb-3">Verdict & Confidence</div>
                             
                             {% if prediction.prediction_label == 'Fake' %}
-                                <span class="badge bg-black text-white fs-6 px-4 py-2 mb-3">SUSPECTED FAKE</span>
+                                <span class="badge bg-black text-white fs-6 px-4 py-2 mb-3" style="background-color: #dc2626 !important; border: none;">SUSPECTED FAKE</span>
+                            {% elif prediction.prediction_label == 'Genuine' %}
+                                <span class="badge border border-dark text-black fs-6 px-4 py-2 mb-3" style="border-color: #16a34a !important; color: #16a34a !important;">GENUINE REVIEW</span>
                             {% else %}
-                                <span class="badge border border-dark text-black fs-6 px-4 py-2 mb-3">GENUINE REVIEW</span>
+                                <span class="badge bg-light text-secondary border fs-6 px-4 py-2 mb-3">INCONCLUSIVE EVIDENCE (40%-60%)</span>
                             {% endif %}
                             
                             <h2 class="fw-bold display-4 mb-1 text-color">{{ prediction.confidence }}%</h2>

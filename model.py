@@ -72,13 +72,17 @@ def preprocess_text(text):
 
 def extract_dense_features(text):
     """
-    Extracts hand-crafted numeric features:
-    1. Review length (characters)
-    2. Number of exclamation marks
-    3. Number of capital letters
+    Extracts numerical and stylometric features with logarithmic dampening
+    to prevent exclamation marks and capital letters from artificially overpowering
+    semantic vocabulary features.
+    
+    Features:
+    1. Log-scaled Review length
+    2. Log-scaled Exclamation count
+    3. Log-scaled Capital letter count
     4. Average word length
-    5. Positive sentiment score
-    6. Negative sentiment score
+    5. Positive sentiment score (VADER)
+    6. Negative sentiment score (VADER)
     """
     if not isinstance(text, str):
         text = ""
@@ -99,39 +103,68 @@ def extract_dense_features(text):
         neg_score = scores.get('neg', 0.0)
         
     return np.array([
-        float(length),
-        float(excl_count),
-        float(caps_count),
+        float(np.log1p(length)),
+        float(np.log1p(excl_count)),
+        float(np.log1p(caps_count)),
         float(avg_word_len),
         float(pos_score),
         float(neg_score)
     ])
 
+
+def classify_probability(prob_fake, lower_thresh=0.40, upper_thresh=0.60):
+    """
+    Classifies a prediction into Genuine, Fake, or Uncertain based on probability margins.
+    - prob_fake <= lower_thresh (default 0.40): Genuine
+    - prob_fake >= upper_thresh (default 0.60): Fake
+    - lower_thresh < prob_fake < upper_thresh (40% to 60%): Uncertain / Inconclusive Evidence
+    
+    Returns:
+        tuple: (label: str, confidence_pct: float, is_uncertain: bool)
+    """
+    prob_genuine = 1.0 - prob_fake
+    if prob_fake >= upper_thresh:
+        return "Fake", round(prob_fake * 100, 2), False
+    elif prob_fake <= lower_thresh:
+        return "Genuine", round(prob_genuine * 100, 2), False
+    else:
+        margin = abs(prob_fake - 0.50)
+        conf = round((0.50 + margin) * 100, 2)
+        return "Uncertain", conf, True
+
+
 def explain_prediction(text, lr_model, vectorizer, scaler):
     """
-    Explains the Logistic Regression prediction for a single review.
-    Calculates log-odds contribution of both TF-IDF words and dense features.
+    Explains the model prediction for a review using linear log-odds attributions.
+    Calculates contributions of both TF-IDF words and dense features.
     """
     explanation = {
         'genuine_indicators': [],
         'fake_indicators': [],
-        'intercept': float(lr_model.intercept_[0]),
+        'intercept': float(lr_model.intercept_[0]) if hasattr(lr_model, 'intercept_') else 0.0,
         'dense_metrics': {}
     }
     
-    # 1. Capture original metrics
-    dense_raw = extract_dense_features(text)
+    # 1. Capture original unscaled metrics for human inspection
+    raw_length = len(text) if isinstance(text, str) else 0
+    raw_excl = text.count('!') if isinstance(text, str) else 0
+    raw_caps = sum(1 for c in text if c.isupper()) if isinstance(text, str) else 0
+    words = text.split() if isinstance(text, str) else []
+    raw_avg_word = round(np.mean([len(w) for w in words]), 2) if words else 0.0
+    
+    scores = SIA.polarity_scores(text) if SIA and isinstance(text, str) else {}
     explanation['dense_metrics'] = {
-        'length': int(dense_raw[0]),
-        'exclamation_marks': int(dense_raw[1]),
-        'capital_letters': int(dense_raw[2]),
-        'avg_word_len': round(dense_raw[3], 2),
-        'positive_sentiment': round(dense_raw[4], 2),
-        'negative_sentiment': round(dense_raw[5], 2)
+        'length': raw_length,
+        'exclamation_marks': raw_excl,
+        'capital_letters': raw_caps,
+        'avg_word_len': raw_avg_word,
+        'positive_sentiment': round(scores.get('pos', 0.0), 2),
+        'negative_sentiment': round(scores.get('neg', 0.0), 2)
     }
     
     # 2. Get scaled dense features and their coefficients
-    dense_scaled = scaler.transform(dense_raw.reshape(1, -1))[0]
+    dense_vec = extract_dense_features(text)
+    dense_scaled = scaler.transform(dense_vec.reshape(1, -1))[0]
     num_vocab = len(vectorizer.get_feature_names_out())
     dense_coefs = lr_model.coef_[0][num_vocab:]
     
