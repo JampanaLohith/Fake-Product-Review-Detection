@@ -178,46 +178,49 @@ def main():
     # 2. Extract Features
     print("Preprocessing text reviews and extracting dense features...")
     
-    # Text cleaning
-    df['cleaned_review'] = df['review'].apply(preprocess_text)
-    
-    # Dense hand-crafted features
-    dense_list = []
-    for r in df['review']:
-        dense_list.append(extract_dense_features(r))
-    X_dense = np.vstack(dense_list)
-    
-    # 3. Fit vectorizer and scaler on the entire dataset first (to define dimensions)
-    # TF-IDF Vectorizer (unigrams + bigrams)
-    vectorizer = TfidfVectorizer(ngram_range=(1, 2), min_df=2)
-    X_tfidf_all = vectorizer.fit_transform(df['cleaned_review'])
-    
-    # Scaler for dense features
-    scaler = StandardScaler()
-    X_dense_scaled_all = scaler.fit_transform(X_dense)
-    
-    # Combine TF-IDF and dense features
-    X_combined_all = scipy.sparse.hstack([X_tfidf_all, X_dense_scaled_all])
+    # 2. Train-Test Split (80/20) BEFORE fitting Vectorizer or Scaler to prevent Data Leakage
+    raw_reviews = df['review'].values
     y_all = df['label'].values
     
-    # 4. Train-Test Split (80/20)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_combined_all, y_all, test_size=0.20, random_state=42, stratify=y_all
+    X_train_raw, X_test_raw, y_train, y_test = train_test_split(
+        raw_reviews, y_all, test_size=0.20, random_state=42, stratify=y_all
     )
     
-    # 5. Train & Evaluate Models
+    # 3. Fit Vectorizer and Scaler STRICTLY on Training Set
+    print("Preprocessing training text and fitting TF-IDF Vectorizer...")
+    train_cleaned = [preprocess_text(r) for r in X_train_raw]
+    test_cleaned = [preprocess_text(r) for r in X_test_raw]
+    
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2), min_df=2, sublinear_tf=True)
+    X_train_tfidf = vectorizer.fit_transform(train_cleaned)
+    X_test_tfidf = vectorizer.transform(test_cleaned)
+    
+    # Extract dense features and fit StandardScaler strictly on training set
+    print("Extracting dense stylometric features and fitting StandardScaler...")
+    dense_train = np.vstack([extract_dense_features(r) for r in X_train_raw])
+    dense_test = np.vstack([extract_dense_features(r) for r in X_test_raw])
+    
+    scaler = StandardScaler()
+    X_train_dense = scaler.fit_transform(dense_train)
+    X_test_dense = scaler.transform(dense_test)
+    
+    # Combine sparse TF-IDF and dense features
+    X_train = scipy.sparse.hstack([X_train_tfidf, X_train_dense])
+    X_test = scipy.sparse.hstack([X_test_tfidf, X_test_dense])
+    
+    # 4. Train & Evaluate Models
     print("Training Logistic Regression model...")
     lr_model = LogisticRegression(max_iter=1000, random_state=42)
     lr_model.fit(X_train, y_train)
     
     # Logistic Regression Evaluation
     y_pred_lr = lr_model.predict(X_test)
-    y_prob_lr = lr_model.predict_proba(X_test)
+    y_prob_lr = lr_model.predict_proba(X_test)[:, 1]
     acc_lr = accuracy_score(y_test, y_pred_lr)
     prec_lr, rec_lr, f1_lr, _ = precision_recall_fscore_support(y_test, y_pred_lr, average='binary')
     cm_lr = confusion_matrix(y_test, y_pred_lr).tolist() # [[TN, FP], [FN, TP]]
     
-    print(f"Logistic Regression Accuracy: {acc_lr:.4f}")
+    print(f"Logistic Regression Test Accuracy (Data Leakage Fixed): {acc_lr:.4f}")
     
     print("Training Random Forest model (for comparison)...")
     rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
@@ -229,22 +232,21 @@ def main():
     prec_rf, rec_rf, f1_rf, _ = precision_recall_fscore_support(y_test, y_pred_rf, average='binary')
     cm_rf = confusion_matrix(y_test, y_pred_rf).tolist()
     
-    print(f"Random Forest Accuracy: {acc_rf:.4f}")
+    print(f"Random Forest Test Accuracy: {acc_rf:.4f}")
     
-    # 6. Select Best Model
+    # 5. Select Best Model
     best_model_name = "Logistic Regression" if acc_lr >= acc_rf else "Random Forest"
     best_model = lr_model if acc_lr >= acc_rf else rf_model
     print(f"Best model selected: {best_model_name}")
     
-    # Cross Validation on Logistic Regression
-    cv_scores = cross_val_score(lr_model, X_combined_all, y_all, cv=5)
+    # Cross Validation on Training Split
+    cv_scores = cross_val_score(lr_model, X_train, y_train, cv=5)
     cv_mean = cv_scores.mean()
-    print(f"5-Fold Cross Validation Accuracy (Logistic Regression): {cv_mean:.4f} (+/- {cv_scores.std():.4f})")
+    print(f"5-Fold Cross Validation Accuracy (Training Split): {cv_mean:.4f} (+/- {cv_scores.std():.4f})")
     
-    # 7. Save Models and Metadata
+    # 6. Save Models and Metadata
     print("Saving pickles to disk...")
-    # We save Logistic Regression specifically as model.pkl because it offers explainability coefficients
-    # and has high accuracy on this clean template dataset.
+    # Logistic Regression is saved as primary model.pkl for explainability coefficients and interpretability
     joblib.dump(lr_model, "model.pkl")
     joblib.dump(vectorizer, "vectorizer.pkl")
     joblib.dump(scaler, "scaler.pkl")
