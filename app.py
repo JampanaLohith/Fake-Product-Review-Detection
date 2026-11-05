@@ -79,12 +79,14 @@ def init_db():
 def _migrate_db(conn):
     """Adds any missing columns to existing tables without data loss."""
     migrations = [
-        ("product_analyses", "platform_name", "TEXT DEFAULT 'E-Commerce'"),
-        ("product_reviews",  "rating",        "REAL"),
-        ("product_reviews",  "author",        "TEXT"),
-        ("product_reviews",  "date",          "TEXT"),
-        ("product_reviews",  "verified",      "INTEGER DEFAULT 0"),
-        ("product_reviews",  "source",        "TEXT"),
+        ("product_analyses", "platform_name",     "TEXT DEFAULT 'E-Commerce'"),
+        ("product_analyses", "extraction_status", "TEXT DEFAULT 'Live Scraped (Verified)'"),
+        ("predictions",      "source",            "TEXT DEFAULT 'Manual Review Submission'"),
+        ("product_reviews",  "rating",            "REAL"),
+        ("product_reviews",  "author",            "TEXT"),
+        ("product_reviews",  "date",              "TEXT"),
+        ("product_reviews",  "verified",          "INTEGER DEFAULT 0"),
+        ("product_reviews",  "source",            "TEXT"),
     ]
     for table, column, col_def in migrations:
         try:
@@ -194,9 +196,9 @@ def predict():
         try:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO predictions (review_text, prediction_label, confidence, prob_fake, prob_genuine)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (review_text, prediction_label, confidence_pct, float(prob_fake), float(prob_genuine)))
+                INSERT INTO predictions (review_text, prediction_label, confidence, prob_fake, prob_genuine, source)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (review_text, prediction_label, confidence_pct, float(prob_fake), float(prob_genuine), 'Manual Review Submission'))
             conn.commit()
             prediction_id = cursor.lastrowid
         finally:
@@ -253,17 +255,35 @@ def predict_product():
     # SSRF Pre-validation
     is_safe, err_msg = is_safe_url(product_url)
     if not is_safe:
-        flash(f"Invalid or restricted URL: {err_msg}", "warning")
-        return redirect(url_for('index'))
+        err_text = f"Invalid or restricted URL: {err_msg}"
+        flash(err_text, "warning")
+        extraction_failure = {
+            "title": "Unable to retrieve actual product reviews",
+            "reason": err_text,
+            "platform": "Unknown",
+            "url": product_url,
+            "product_name": "Unverified Target"
+        }
+        return render_template('index.html', extraction_failure=extraction_failure), 200
 
     try:
         product_name = extract_product_name(product_url)
         reviews, platform_name, error_msg = fetch_product_reviews(product_url, product_name)
         
-        # When 0 real reviews could be extracted, inform user truthfully
+        # When 0 real reviews could be extracted, inform user truthfully.
+        # DO NOT run ML model on empty data. DO NOT generate synthetic reviews or authenticity score.
         if not reviews or len(reviews) == 0:
-            flash(error_msg or f"Unable to fetch reviews from this {platform_name} product page.", "warning")
-            return redirect(url_for('index'))
+            err_title = "Unable to retrieve actual product reviews"
+            err_detail = error_msg or f"Access to {platform_name} was restricted by third-party anti-bot protections or no customer reviews exist."
+            flash(f"{err_title}. {err_detail}", "warning")
+            extraction_failure = {
+                "title": err_title,
+                "reason": err_detail,
+                "platform": platform_name,
+                "url": product_url,
+                "product_name": product_name
+            }
+            return render_template('index.html', extraction_failure=extraction_failure), 200
             
         fake_count = 0
         genuine_count = 0
@@ -308,9 +328,9 @@ def predict_product():
         try:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO product_analyses (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score))
+                INSERT INTO product_analyses (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score, extraction_status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (product_name, product_url, platform_name, total_reviews, fake_count, genuine_count, trust_score, 'Live Scraped (Verified)'))
             analysis_id = cursor.lastrowid
             
             for pred in predictions_batch:

@@ -98,16 +98,19 @@ class FullSystemAuditTests(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"Invalid or restricted URL", resp.data)
 
-    def test_09_predict_product_scraping_blocked_fallback_success(self):
+    def test_09_predict_product_scraping_blocked(self):
         """
-        Verify that when third-party scraping encounters cloud anti-bot blocks,
-        the system uses product-tailored review generation so the analysis succeeds seamlessly.
+        Verify that when third-party scraping fails or encounters anti-bot blocks,
+        NO synthetic reviews or fake authenticity scores are generated.
+        The failure is truthfully reported to the user with options to retry or enter reviews manually.
         """
-        with patch("model.safe_fetch_url", return_value=(None, "Anti-bot 403 Forbidden")):
+        with patch("model.safe_fetch_url", return_value=(None, "Access blocked by Amazon anti-bot protections (HTTP 403).")):
             resp = self.client.post("/predict_product", data={"product_url": "https://www.amazon.in/dp/B0CHX1W1Y2"}, follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
-            self.assertIn(b"Authenticity Score", resp.data)
-
+            self.assertIn(b"Unable to retrieve actual product reviews", resp.data)
+            self.assertIn(b"anti-bot", resp.data)
+            # Must NOT display authenticity score when 0 actual reviews were retrieved
+            self.assertNotIn(b"Authenticity Score", resp.data)
 
     def test_10_predict_product_with_real_reviews(self):
         """
@@ -125,7 +128,30 @@ class FullSystemAuditTests(unittest.TestCase):
             resp = self.client.post("/predict_product", data={"product_url": "https://www.amazon.in/dp/B0CHX1W1Y2"}, follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
             self.assertIn(b"Authenticity Score", resp.data)
-            self.assertIn(b"Actual Reviews Fetched", resp.data)
+            self.assertIn(b"Actual Reviews Collected", resp.data)
+
+    def test_14_predict_product_zero_reviews_returned(self):
+        """
+        Verify handling when a web page loads (200 OK) but zero customer reviews are found in the DOM.
+        """
+        with patch("app.fetch_product_reviews", return_value=([], "Amazon", "Zero customer reviews were found on this product page.")):
+            resp = self.client.post("/predict_product", data={"product_url": "https://www.amazon.in/dp/B0CHX1W1Y2"}, follow_redirects=True)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn(b"Unable to retrieve actual product reviews", resp.data)
+            self.assertNotIn(b"Authenticity Score", resp.data)
+
+    def test_15_manual_review_submission_distinguished(self):
+        """
+        Verify that manual review submissions through /predict are recorded with
+        source='Manual Review Submission' to clearly distinguish from live scraped data.
+        """
+        review = "This is a manually pasted customer review for verification purposes."
+        resp = self.client.post("/predict", data={"review": review}, follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        conn = get_db_connection()
+        row = conn.execute("SELECT source FROM predictions ORDER BY id DESC LIMIT 1").fetchone()
+        conn.close()
+        self.assertEqual(row["source"], "Manual Review Submission")
 
     def test_11_api_analyze_valid_and_invalid(self):
         """Verify /api/analyze JSON API handling."""

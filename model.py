@@ -450,16 +450,18 @@ def fetch_product_reviews(url, product_name):
     platform = detect_platform(url)
 
     reviews = []
+    error_reason = None
+
     if platform == "Flipkart":
-        reviews = _scrape_flipkart_reviews(url)
+        reviews, error_reason = _scrape_flipkart_reviews(url)
     elif platform == "Amazon":
-        reviews = _scrape_amazon_reviews(url)
+        reviews, error_reason = _scrape_amazon_reviews(url)
     elif platform == "Myntra":
-        reviews = _scrape_myntra_reviews(url)
+        reviews, error_reason = _scrape_myntra_reviews(url)
     elif platform == "Meesho":
-        reviews = _scrape_meesho_reviews(url)
+        reviews, error_reason = _scrape_meesho_reviews(url)
     else:
-        reviews = _scrape_generic_reviews(url)
+        reviews, error_reason = _scrape_generic_reviews(url)
 
     # Deduplicate reviews based on normalized review text
     unique_reviews = []
@@ -470,13 +472,17 @@ def fetch_product_reviews(url, product_name):
             seen_texts.add(norm)
             unique_reviews.append(r)
 
-    if unique_reviews and len(unique_reviews) >= 3:
+    # If actual reviews were successfully extracted, return them
+    if unique_reviews:
         return unique_reviews, platform, None
 
-    # When live cloud scraping is restricted by platform anti-bot measures,
-    # generate realistic product-specific reviews tailored to the URL & product name
-    fallback_reviews = _generate_product_reviews(product_name, platform, url)
-    return fallback_reviews, platform, None
+    # Extraction failed or 0 reviews found - DO NOT generate synthetic reviews.
+    # Return empty list and truthful failure reason.
+    failure_msg = error_reason or (
+        f"Unable to retrieve actual product reviews from {platform}. "
+        f"The platform returned no reviews or access was blocked by third-party anti-bot protections."
+    )
+    return [], platform, failure_msg
 
 
 
@@ -507,8 +513,13 @@ def _scrape_flipkart_reviews(url):
     try:
         from bs4 import BeautifulSoup
         resp, err = safe_fetch_url(url, timeout=12)
-        if not resp or resp.status_code != 200:
-            return []
+        if not resp:
+            return [], err or "Unable to connect to Flipkart server."
+        if resp.status_code == 403 or resp.status_code == 503:
+            return [], f"Access blocked by Flipkart anti-bot protections (HTTP {resp.status_code})."
+        if resp.status_code != 200:
+            return [], f"Flipkart returned HTTP error status {resp.status_code}."
+
         soup = BeautifulSoup(resp.text, "html.parser")
         review_blocks = soup.select("div.col.EPCmJX, div._27M-vq, div.t-ZTKy")
 
@@ -535,9 +546,12 @@ def _scrape_flipkart_reviews(url):
                 "verified": True,
                 "source": "Live Scraped - Flipkart"
             })
-        return reviews
-    except Exception:
-        return []
+
+        if not reviews:
+            return [], "Page loaded successfully, but zero review elements were found in Flipkart HTML. Reviews may require dynamic JavaScript rendering."
+        return reviews, None
+    except Exception as e:
+        return [], f"Extraction parsing error: {e}"
 
 
 def _scrape_amazon_reviews(url):
@@ -555,8 +569,13 @@ def _scrape_amazon_reviews(url):
                 reviews_url = f"https://www.{clean_host}/product-reviews/{asin_match.group(1)}"
 
         resp, err = safe_fetch_url(reviews_url, timeout=12)
-        if not resp or resp.status_code != 200:
-            return []
+        if not resp:
+            return [], err or "Unable to connect to Amazon server."
+        if resp.status_code == 403 or resp.status_code == 503:
+            return [], f"Access blocked by Amazon anti-bot protections (HTTP {resp.status_code})."
+        if resp.status_code != 200:
+            return [], f"Amazon returned HTTP error status {resp.status_code}."
+
         soup = BeautifulSoup(resp.text, "html.parser")
         review_divs = soup.select("div[data-hook='review']")
         reviews = []
@@ -589,9 +608,12 @@ def _scrape_amazon_reviews(url):
                 "verified": verified,
                 "source": "Live Scraped - Amazon"
             })
-        return reviews
-    except Exception:
-        return []
+
+        if not reviews:
+            return [], "Page loaded successfully, but zero review elements were found in Amazon HTML. Access may have been restricted or product has no written reviews."
+        return reviews, None
+    except Exception as e:
+        return [], f"Extraction parsing error: {e}"
 
 
 def _scrape_myntra_reviews(url):
@@ -599,8 +621,13 @@ def _scrape_myntra_reviews(url):
     try:
         from bs4 import BeautifulSoup
         resp, err = safe_fetch_url(url, timeout=12)
-        if not resp or resp.status_code != 200:
-            return []
+        if not resp:
+            return [], err or "Unable to connect to Myntra server."
+        if resp.status_code == 403 or resp.status_code == 503:
+            return [], f"Access blocked by Myntra anti-bot protections (HTTP {resp.status_code})."
+        if resp.status_code != 200:
+            return [], f"Myntra returned HTTP error status {resp.status_code}."
+
         soup = BeautifulSoup(resp.text, "html.parser")
         review_divs = soup.select("div.user-review-reviewTextWrapper, div.detailed-reviews-userReview")
         reviews = []
@@ -616,9 +643,11 @@ def _scrape_myntra_reviews(url):
                 "verified": True,
                 "source": "Live Scraped - Myntra"
             })
-        return reviews
-    except Exception:
-        return []
+        if not reviews:
+            return [], "Page loaded, but zero review elements were found. Myntra relies heavily on client-side React rendering."
+        return reviews, None
+    except Exception as e:
+        return [], f"Extraction parsing error: {e}"
 
 
 def _scrape_meesho_reviews(url):
@@ -626,8 +655,13 @@ def _scrape_meesho_reviews(url):
     try:
         from bs4 import BeautifulSoup
         resp, err = safe_fetch_url(url, timeout=12)
-        if not resp or resp.status_code != 200:
-            return []
+        if not resp:
+            return [], err or "Unable to connect to Meesho server."
+        if resp.status_code == 403 or resp.status_code == 503:
+            return [], f"Access blocked by Meesho anti-bot protections (HTTP {resp.status_code})."
+        if resp.status_code != 200:
+            return [], f"Meesho returned HTTP error status {resp.status_code}."
+
         soup = BeautifulSoup(resp.text, "html.parser")
         review_divs = soup.select("p.sc-eDvSVe, div[class*='review']")
         reviews = []
@@ -643,9 +677,11 @@ def _scrape_meesho_reviews(url):
                 "verified": True,
                 "source": "Live Scraped - Meesho"
             })
-        return reviews
-    except Exception:
-        return []
+        if not reviews:
+            return [], "Page loaded, but zero review elements were found in Meesho HTML."
+        return reviews, None
+    except Exception as e:
+        return [], f"Extraction parsing error: {e}"
 
 
 def _scrape_generic_reviews(url):
@@ -653,8 +689,13 @@ def _scrape_generic_reviews(url):
     try:
         from bs4 import BeautifulSoup
         resp, err = safe_fetch_url(url, timeout=12)
-        if not resp or resp.status_code != 200:
-            return []
+        if not resp:
+            return [], err or "Unable to connect to e-commerce server."
+        if resp.status_code == 403 or resp.status_code == 503:
+            return [], f"Access blocked by e-commerce server anti-bot protections (HTTP {resp.status_code})."
+        if resp.status_code != 200:
+            return [], f"Server returned HTTP error status {resp.status_code}."
+
         soup = BeautifulSoup(resp.text, "html.parser")
         selectors = [
             "div.review", "div.user-review", "div[class*='review-text']",
@@ -677,7 +718,9 @@ def _scrape_generic_reviews(url):
                     })
             if reviews:
                 break
-        return reviews
-    except Exception:
-        return []
+        if not reviews:
+            return [], "Zero review elements matched common e-commerce HTML patterns."
+        return reviews, None
+    except Exception as e:
+        return [], f"Extraction parsing error: {e}"
 
