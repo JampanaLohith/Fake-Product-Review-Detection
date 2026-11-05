@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VeriTrust AI — Fake Review Detection</title>
+    <title>VeriTrust AI — Fake Product Review Detection</title>
     
-    <!-- Google Fonts -->
+    <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -22,37 +22,37 @@
 <body>
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay d-none">
-        <div class="text-center text-white">
+        <div class="text-center p-4">
             <div class="spinner-border spinner-custom mb-3" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
-            <h4 class="fw-semibold">Analyzing Text Features...</h4>
-            <p class="text-white-50">Calculating sentiment scores and token densities...</p>
+            <h5 class="fw-semibold mb-1 text-color">Analyzing Product Reviews...</h5>
+            <p class="small text-secondary mb-0">Extracting lexical features, stylometric signals, and sentiment extremity...</p>
         </div>
     </div>
 
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg border-bottom py-3">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('index') }}">
-                <i class="bi bi-shield-check text-primary fs-3"></i>
-                <span class="fw-bold tracking-tight">VeriTrust AI</span>
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-shield-check"></i>
+                <span>VeriTrust AI</span>
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                <ul class="navbar-nav ms-auto align-items-center gap-1">
                     <li class="nav-item">
-                        <a class="nav-link active" href="{{ url_for('index') }}"><i class="bi bi-house-door me-1"></i> Home</a>
+                        <a class="nav-link active" href="{{ url_for('index') }}">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard') }}"><i class="bi bi-bar-chart-line me-1"></i> Dashboard</a>
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('report') }}"><i class="bi bi-file-earmark-pdf me-1"></i> Project Report</a>
+                        <a class="nav-link" href="{{ url_for('report') }}">Project Report</a>
                     </li>
                     <li class="nav-item ms-2">
                         <button id="themeToggleBtn" class="btn btn-outline-secondary btn-icon-only" aria-label="Toggle Theme">
@@ -70,7 +70,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm border-0 mb-4" role="alert">
+                    <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
                         <div class="d-flex align-items-center gap-2">
                             {% if category == 'danger' %}
                                 <i class="bi bi-exclamation-octagon-fill fs-5"></i>
@@ -87,89 +87,65 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Hero Section -->
-        <div class="row align-items-center g-5 mb-5 pt-3">
-            <div class="col-lg-6 text-center text-lg-start">
-                <span class="hero-badge mb-3">
-                    <i class="bi bi-shield-lock-fill text-primary"></i> AI-Powered Review Sentinel
+        <!-- Hero Section: Clean, Centered SaaS Layout -->
+        <div class="text-center py-4 mb-4">
+            <div class="mb-3">
+                <span class="hero-badge">
+                    <i class="bi bi-shield-check"></i> Machine Learning Review Verification
                 </span>
-                <h1 class="display-4 fw-extrabold lh-tight mb-3 mt-3">
-                    Detect Fake Reviews with <span class="text-gradient">AI Precision</span>
-                </h1>
-                <p class="lead mb-4" style="color:var(--text-2); font-size: 1.15rem; line-height: 1.7;">
-                    Instantly analyze real product pages from Amazon, Flipkart, Myntra &amp; Meesho. Our hybrid TF-IDF and stylometric machine learning engine flags bots, paid hype, and competitor attacks in real-time.
-                </p>
-                <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-3 mb-4">
-                    <a href="#analyzer" class="btn btn-primary btn-lg px-5 py-3">
-                        <i class="bi bi-search me-2"></i> Analyze Product Now
-                    </a>
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-lg px-4 py-3">
-                        <i class="bi bi-cpu me-2"></i> Model Dashboard
-                    </a>
-                </div>
-
-                <!-- Metric Badges -->
-                <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-2 pt-2">
-                    <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill">
-                        <i class="bi bi-check-circle-fill me-1"></i> 100% Benchmark Accuracy
-                    </span>
-                    <span class="badge bg-warning-subtle text-warning px-3 py-2 rounded-pill">
-                        <i class="bi bi-lightning-charge-fill me-1"></i> Real-Time Scraper
-                    </span>
-                    <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">
-                        <i class="bi bi-shield-shaded me-1"></i> Explainable ML Weights
-                    </span>
-                </div>
             </div>
-
-            <!-- Right Column: Hero Image -->
-            <div class="col-lg-6">
-                <img src="{{ url_for('static', filename='images/hero.jpg') }}" 
-                     alt="AI Review Analysis Dashboard" 
-                     class="img-fluid rounded-4 shadow-lg w-100">
+            <h1 class="display-4 fw-bold mb-3 mx-auto" style="max-width: 820px; letter-spacing: -0.03em;">
+                Inspect Product Reviews with Machine Learning Precision.
+            </h1>
+            <p class="lead mb-4 mx-auto" style="max-width: 660px;">
+                Submit any e-commerce product link to evaluate customer review authenticity, extract stylometric patterns, and detect fraudulent opinion spam.
+            </p>
+            <div class="d-flex justify-content-center gap-2 flex-wrap text-secondary small">
+                <span class="badge bg-secondary-subtle px-3 py-1.5"><i class="bi bi-check2 me-1"></i> 100% Benchmark Accuracy</span>
+                <span class="badge bg-secondary-subtle px-3 py-1.5"><i class="bi bi-check2 me-1"></i> Stylometrics &amp; VADER</span>
+                <span class="badge bg-secondary-subtle px-3 py-1.5"><i class="bi bi-check2 me-1"></i> Explainable Model Weights</span>
             </div>
         </div>
 
-
         <!-- Analyzer Section (URL Only) -->
-        <div id="analyzer" class="scroll-mt py-5">
-            <div class="card bg-card shadow-sm border-0 rounded-4">
-                <div class="card-header py-4 px-4 px-lg-5 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div id="analyzer" class="mb-5 pb-3">
+            <div class="card border">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="icon-box bg-primary-subtle text-primary shadow-sm" style="width:48px;height:48px;border-radius:14px;">
-                            <i class="bi bi-link-45deg fs-4"></i>
+                        <div class="icon-box">
+                            <i class="bi bi-link-45deg"></i>
                         </div>
                         <div>
-                            <h4 class="mb-0 fw-bold">Live E-Commerce URL Analyzer</h4>
-                            <p class="mb-0 small text-secondary">Paste any product URL &mdash; our system fetches and evaluates customer reviews</p>
+                            <h5 class="mb-0 fw-semibold">Live E-Commerce URL Analyzer</h5>
+                            <small class="text-secondary">Supported platforms: Amazon, Flipkart, Myntra, Meesho</small>
                         </div>
                     </div>
                     <div class="d-flex gap-1 flex-wrap">
-                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2"><i class="bi bi-amazon text-warning"></i> Amazon</span>
-                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2"><i class="bi bi-bag-check text-primary"></i> Flipkart</span>
-                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2"><i class="bi bi-tag-fill text-danger"></i> Myntra</span>
-                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2"><i class="bi bi-cart3 text-success"></i> Meesho</span>
+                        <span class="badge bg-secondary-subtle"><i class="bi bi-amazon me-1"></i> Amazon</span>
+                        <span class="badge bg-secondary-subtle"><i class="bi bi-bag-check me-1"></i> Flipkart</span>
+                        <span class="badge bg-secondary-subtle"><i class="bi bi-tag-fill me-1"></i> Myntra</span>
+                        <span class="badge bg-secondary-subtle"><i class="bi bi-cart3 me-1"></i> Meesho</span>
                     </div>
                 </div>
 
-                <div class="card-body p-4 p-lg-5">
+                <div class="card-body p-4">
                     <form id="productUrlForm" action="{{ url_for('predict_product') }}" method="POST">
                         <div class="mb-4">
-                            <label for="productUrlInput" class="form-label fw-semibold text-secondary mb-2">Product Page URL <span class="text-danger">*</span></label>
-                            <div class="input-group d-flex flex-column flex-md-row align-items-stretch gap-2">
-                                <div class="d-flex align-items-center flex-grow-1 px-3 border rounded-3 bg-transparent">
-                                    <i class="bi bi-globe2 text-primary fs-5 me-2"></i>
+                            <label for="productUrlInput" class="form-label fw-medium text-secondary mb-2 small text-uppercase" style="letter-spacing: 0.04em;">
+                                Product Page URL <span class="text-danger">*</span>
+                            </label>
+                            <div class="d-flex flex-column flex-md-row gap-2">
+                                <div class="position-relative flex-grow-1">
                                     <input type="url" 
-                                           class="form-control border-0 bg-transparent px-2 py-3" 
+                                           class="form-control py-2.5 px-3" 
                                            id="productUrlInput" 
                                            name="product_url" 
                                            placeholder="https://www.amazon.in/dp/... or https://www.flipkart.com/..." 
                                            required 
-                                           style="box-shadow: none; font-size: 1.05rem;"
                                            aria-describedby="urlValidationFeedback">
                                 </div>
-                                <button type="submit" class="btn btn-primary px-5 py-3 fs-6" id="btnSubmitUrl">
-                                    <i class="bi bi-lightning-fill me-1"></i> Analyze Product Reviews
+                                <button type="submit" class="btn btn-primary px-4 py-2.5 fw-medium" id="btnSubmitUrl">
+                                    <i class="bi bi-arrow-right-circle me-1"></i> Analyze Product Reviews
                                 </button>
                             </div>
                             <div class="invalid-feedback mt-2 d-block text-danger d-none" id="urlValidationFeedback">
@@ -178,18 +154,18 @@
                         </div>
 
                         <!-- Sample Presets & Controls -->
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pt-2">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-2 border-top">
                             <div class="d-flex gap-2 flex-wrap align-items-center">
-                                <span class="small fw-semibold text-secondary">Quick Test Samples:</span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="btnAmazonSample">
-                                    <i class="bi bi-amazon me-1 text-warning"></i> Amazon iPhone 15
+                                <span class="small text-muted">Test Samples:</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-3" id="btnAmazonSample">
+                                    <i class="bi bi-amazon me-1"></i> Amazon Sample
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="btnFlipkartSample">
-                                    <i class="bi bi-bag-check me-1 text-primary"></i> Flipkart iPhone 15
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-3" id="btnFlipkartSample">
+                                    <i class="bi bi-bag-check me-1"></i> Flipkart Sample
                                 </button>
                             </div>
-                            <button type="button" class="btn btn-sm btn-link text-secondary text-decoration-none" id="btnClearUrl">
-                                <i class="bi bi-trash3 me-1"></i> Clear Input
+                            <button type="button" class="btn btn-sm btn-link text-secondary" id="btnClearUrl">
+                                <i class="bi bi-x-circle me-1"></i> Clear Input
                             </button>
                         </div>
                     </form>
@@ -197,14 +173,12 @@
             </div>
         </div>
 
-
-
-        <!-- Feature Grid -->
+        <!-- Feature Grid: Pipeline Architecture -->
         <div class="py-4 mb-4">
-            <div class="text-center mb-5">
-                <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-semibold mb-2">Architectural Breakdown</span>
-                <h2 class="fw-bold">How the <span class="text-gradient">Machine Learning Pipeline</span> Works</h2>
-                <p class="text-secondary max-w-600 mx-auto" style="max-width: 650px;">
+            <div class="mb-4">
+                <span class="badge bg-secondary-subtle text-uppercase mb-2" style="letter-spacing: 0.05em;">Architecture</span>
+                <h2 class="fw-bold mb-2">How the Machine Learning Pipeline Works</h2>
+                <p class="text-secondary small mb-0" style="max-width: 650px;">
                     Every submitted product review is processed through a multi-stage feature extraction pipeline before classification.
                 </p>
             </div>
@@ -212,48 +186,48 @@
             <div class="row g-4">
                 <!-- Card 1 -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="card bg-card shadow-sm border-0 rounded-4 h-100 p-4">
-                        <div class="icon-box bg-primary-subtle text-primary">
-                            <i class="bi bi-funnel-fill"></i>
+                    <div class="card h-100 p-4">
+                        <div class="icon-box mb-3">
+                            <i class="bi bi-funnel"></i>
                         </div>
-                        <h4 class="fw-bold mb-2">TF-IDF Lexical Extraction</h4>
-                        <p class="text-secondary mb-3 small" style="line-height: 1.7;">
+                        <h4 class="fw-semibold mb-2">01. TF-IDF Lexical Extraction</h4>
+                        <p class="text-secondary small mb-4">
                             Extracts unigram and bigram word frequencies after NLTK tokenization and WordNet lemmatization, pinpointing deceptive marketing vocabulary and bot phrases.
                         </p>
-                        <div class="mt-auto pt-2 border-top border-opacity-10" style="border-color:var(--glass-border)!important;">
-                            <span class="badge bg-secondary-subtle small"><i class="bi bi-code-slash me-1"></i> N-Gram Vectorizer</span>
+                        <div class="mt-auto pt-3 border-top">
+                            <span class="badge bg-secondary-subtle">N-Gram Vectorizer</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Card 2 -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="card bg-card shadow-sm border-0 rounded-4 h-100 p-4">
-                        <div class="icon-box bg-success-subtle text-success">
-                            <i class="bi bi-percent"></i>
+                    <div class="card h-100 p-4">
+                        <div class="icon-box mb-3">
+                            <i class="bi bi-bar-chart"></i>
                         </div>
-                        <h4 class="fw-bold mb-2">Stylometric Statistics</h4>
-                        <p class="text-secondary mb-3 small" style="line-height: 1.7;">
+                        <h4 class="fw-semibold mb-2">02. Stylometric Statistics</h4>
+                        <p class="text-secondary small mb-4">
                             Calculates structural metrics including punctuation density, capitalization ratios, review character length, and average word length to detect unnatural bot formatting.
                         </p>
-                        <div class="mt-auto pt-2 border-top border-opacity-10" style="border-color:var(--glass-border)!important;">
-                            <span class="badge bg-secondary-subtle small"><i class="bi bi-bar-chart-fill me-1"></i> Dense Feature Matrix</span>
+                        <div class="mt-auto pt-3 border-top">
+                            <span class="badge bg-secondary-subtle">Dense Feature Matrix</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Card 3 -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="card bg-card shadow-sm border-0 rounded-4 h-100 p-4">
-                        <div class="icon-box bg-info-subtle text-info">
-                            <i class="bi bi-emoji-heart-eyes-fill"></i>
+                    <div class="card h-100 p-4">
+                        <div class="icon-box mb-3">
+                            <i class="bi bi-activity"></i>
                         </div>
-                        <h4 class="fw-bold mb-2">VADER Sentiment Polarity</h4>
-                        <p class="text-secondary mb-3 small" style="line-height: 1.7;">
-                            Measures positive and negative sentiment intensity scores, exposing extreme emotional manipulation and fake 5-star or 1-star attack patterns.
+                        <h4 class="fw-semibold mb-2">03. VADER Sentiment Polarity</h4>
+                        <p class="text-secondary small mb-4">
+                            Measures positive and negative sentiment intensity scores, exposing extreme emotional manipulation and fake 5-star promotional or 1-star attack patterns.
                         </p>
-                        <div class="mt-auto pt-2 border-top border-opacity-10" style="border-color:var(--glass-border)!important;">
-                            <span class="badge bg-secondary-subtle small"><i class="bi bi-heart-pulse-fill me-1"></i> Sentiment Intensity</span>
+                        <div class="mt-auto pt-3 border-top">
+                            <span class="badge bg-secondary-subtle">Sentiment Intensity</span>
                         </div>
                     </div>
                 </div>
@@ -262,17 +236,17 @@
     </main>
 
     <!-- Footer -->
-    <footer class="footer mt-auto py-4 no-print">
+    <footer class="footer mt-auto py-4 border-top">
         <div class="container">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                 <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-shield-check" style="color:var(--blue);filter:drop-shadow(0 0 6px rgba(59,130,246,0.5));font-size:1.2rem;"></i>
-                    <span class="fw-bold" style="color:var(--text-2);">VeriTrust AI</span>
+                    <i class="bi bi-shield-check"></i>
+                    <span class="fw-semibold text-color">VeriTrust AI</span>
                 </div>
-                <p class="mb-0 small" style="color:var(--text-3);">Fake Review Detection using NLP &amp; Machine Learning &mdash; B.Tech AI &amp; ML Project &copy; 2026</p>
+                <p class="mb-0 small text-muted">Fake Product Review Detection System &mdash; B.Tech AI &amp; ML Capstone &copy; 2026</p>
                 <div class="d-flex gap-3">
-                    <a href="{{ url_for('dashboard') }}" class="small" style="color:var(--text-3);text-decoration:none;">Dashboard</a>
-                    <a href="{{ url_for('report') }}" class="small" style="color:var(--text-3);text-decoration:none;">Report</a>
+                    <a href="{{ url_for('dashboard') }}" class="small">Dashboard</a>
+                    <a href="{{ url_for('report') }}" class="small">Project Report</a>
                 </div>
             </div>
         </div>

@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analysis Result - VeriTrust AI</title>
     
-    <!-- Google Fonts -->
+    <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -27,28 +27,33 @@
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg border-bottom py-3 no-print">
+    <nav class="navbar navbar-expand-lg py-3 no-print">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('index') }}">
-                <i class="bi bi-shield-check text-primary fs-3"></i>
+                <span class="d-inline-flex align-items-center justify-content-center bg-black text-white rounded-2" style="width: 28px; height: 28px; font-size: 14px;">
+                    <i class="bi bi-shield-check"></i>
+                </span>
                 <span class="fw-bold tracking-tight">VeriTrust AI</span>
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                <ul class="navbar-nav ms-auto align-items-center gap-1">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}"><i class="bi bi-house-door me-1"></i> Home</a>
+                        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard') }}"><i class="bi bi-bar-chart-line me-1"></i> Dashboard</a>
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('report') }}">Documentation</a>
                     </li>
                     <li class="nav-item ms-2">
                         <button id="themeToggleBtn" class="btn btn-outline-secondary btn-icon-only" aria-label="Toggle Theme">
-                            <i class="bi bi-moon-stars"></i>
+                            <i class="bi bi-moon"></i>
                         </button>
                     </li>
                 </ul>
@@ -57,17 +62,17 @@
     </nav>
 
     <!-- Main Container -->
-    <main class="container py-5">
-        <div class="d-flex justify-content-between align-items-center gap-3 mb-4 no-print">
-            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+    <main class="container py-4">
+        <div class="d-flex justify-content-between align-items-center gap-3 mb-4 no-print flex-wrap">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-arrow-left me-1"></i> Analyze Another Review
             </a>
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-primary" id="btnPrintReport">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnPrintReport">
                     <i class="bi bi-printer me-1"></i> Print
                 </button>
-                <button type="button" class="btn btn-primary shadow-sm" id="btnDownloadPDF">
-                    <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Report
+                <button type="button" class="btn btn-primary btn-sm" id="btnDownloadPDF">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
                 </button>
             </div>
         </div>
@@ -76,7 +81,7 @@
         <div id="pdfReportContent">
             <!-- Header for PDF Export -->
             <div class="pdf-header d-none text-center pb-3 border-bottom mb-4">
-                <h2 class="fw-bold"><i class="bi bi-shield-check text-primary me-2"></i>VeriTrust AI</h2>
+                <h2 class="fw-bold"><i class="bi bi-shield-check me-2"></i>VeriTrust AI</h2>
                 <h5 class="text-secondary">Fake Review Analysis & Verification Report</h5>
                 <small class="text-muted">Generated on: {{ prediction.created_at }} | Prediction ID: #{{ prediction.id }}</small>
             </div>
@@ -84,27 +89,21 @@
             <div class="row g-4">
                 <!-- Summary Card -->
                 <div class="col-lg-5">
-                    <div class="card shadow border-0 rounded-4 h-100 bg-card">
+                    <div class="card h-100">
                         <div class="card-body p-4 text-center d-flex flex-column justify-content-center align-items-center">
-                            <h5 class="fw-bold mb-4 text-secondary">Verdict & Confidence</h5>
+                            <div class="text-uppercase small fw-semibold text-secondary tracking-wide mb-3">Verdict & Confidence</div>
                             
                             {% if prediction.prediction_label == 'Fake' %}
-                                <div class="verdict-icon bg-danger-subtle text-danger rounded-circle mb-3">
-                                    <i class="bi bi-x-octagon-fill"></i>
-                                </div>
-                                <span class="badge bg-danger fs-5 px-4 py-2 rounded-pill mb-3">SUSPECTED FAKE</span>
+                                <span class="badge bg-black text-white fs-6 px-4 py-2 mb-3">SUSPECTED FAKE</span>
                             {% else %}
-                                <div class="verdict-icon bg-success-subtle text-success rounded-circle mb-3">
-                                    <i class="bi bi-check-circle-fill"></i>
-                                </div>
-                                <span class="badge bg-success fs-5 px-4 py-2 rounded-pill mb-3">GENUINE REVIEW</span>
+                                <span class="badge border border-dark text-black fs-6 px-4 py-2 mb-3">GENUINE REVIEW</span>
                             {% endif %}
                             
-                            <h2 class="fw-extrabold display-4 mb-2 text-color">{{ prediction.confidence }}%</h2>
-                            <p class="text-secondary mb-4">Prediction Confidence</p>
+                            <h2 class="fw-bold display-4 mb-1 text-color">{{ prediction.confidence }}%</h2>
+                            <p class="text-secondary small mb-3">Prediction Confidence</p>
                             
                             <!-- Chart.js Container -->
-                            <div class="chart-container mb-2" style="position: relative; height:200px; width:200px">
+                            <div class="chart-container mb-2" style="position: relative; height:180px; width:180px">
                                 <canvas id="resultChart"></canvas>
                             </div>
                         </div>
@@ -113,11 +112,11 @@
 
                 <!-- Input Review Text -->
                 <div class="col-lg-7">
-                    <div class="card shadow border-0 rounded-4 h-100 bg-card">
+                    <div class="card h-100">
                         <div class="card-body p-4 d-flex flex-column">
-                            <h5 class="fw-bold mb-3 text-secondary">Analyzed Review Text</h5>
-                            <div class="review-text-container p-3 rounded-3 flex-grow-1 border bg-light-subtle">
-                                <p class="mb-0 review-quote text-color">"{{ prediction.review_text }}"</p>
+                            <h5 class="fw-semibold mb-3 fs-6 text-color">Analyzed Review Text</h5>
+                            <div class="review-text-container p-3 rounded-2 flex-grow-1 border bg-white">
+                                <p class="mb-0 review-quote text-color small" style="line-height: 1.6;">"{{ prediction.review_text }}"</p>
                             </div>
                         </div>
                     </div>
@@ -125,17 +124,17 @@
 
                 <!-- Hand-crafted Metrics / Explanations -->
                 <div class="col-md-6">
-                    <div class="card shadow border-0 rounded-4 bg-card h-100">
+                    <div class="card h-100">
                         <div class="card-body p-4">
-                            <h5 class="fw-bold mb-4 text-secondary"><i class="bi bi-bar-chart-steps text-primary me-2"></i>Textual Structural Metrics</h5>
+                            <h5 class="fw-semibold mb-3 fs-6 text-color">Textual Structural Metrics</h5>
                             
                             <!-- Length -->
                             <div class="metric-row border-bottom py-2 d-flex justify-content-between align-items-center">
                                 <div>
-                                    <span class="fw-semibold text-color">Review Length</span>
+                                    <span class="fw-medium small text-color">Review Length</span>
                                     <small class="d-block text-secondary">Character count</small>
                                 </div>
-                                <span class="badge bg-secondary-subtle text-secondary fs-6 px-3 py-2 fw-medium">
+                                <span class="badge">
                                     {{ explanation.dense_metrics.length }} chars
                                 </span>
                             </div>
@@ -143,10 +142,10 @@
                             <!-- Capital Letters -->
                             <div class="metric-row border-bottom py-2 d-flex justify-content-between align-items-center">
                                 <div>
-                                    <span class="fw-semibold text-color">Capital Letters</span>
+                                    <span class="fw-medium small text-color">Capital Letters</span>
                                     <small class="d-block text-secondary">High caps indicate artificial hype</small>
                                 </div>
-                                <span class="badge {% if explanation.dense_metrics.capital_letters > 15 %}bg-warning-subtle text-warning{% else %}bg-secondary-subtle text-secondary{% endif %} fs-6 px-3 py-2 fw-medium">
+                                <span class="badge">
                                     {{ explanation.dense_metrics.capital_letters }}
                                 </span>
                             </div>
@@ -154,10 +153,10 @@
                             <!-- Exclamations -->
                             <div class="metric-row border-bottom py-2 d-flex justify-content-between align-items-center">
                                 <div>
-                                    <span class="fw-semibold text-color">Exclamation Marks</span>
+                                    <span class="fw-medium small text-color">Exclamation Marks</span>
                                     <small class="d-block text-secondary">Over-punctuated text points to fakes</small>
                                 </div>
-                                <span class="badge {% if explanation.dense_metrics.exclamation_marks > 2 %}bg-warning-subtle text-warning{% else %}bg-secondary-subtle text-secondary{% endif %} fs-6 px-3 py-2 fw-medium">
+                                <span class="badge">
                                     {{ explanation.dense_metrics.exclamation_marks }}
                                 </span>
                             </div>
@@ -165,10 +164,10 @@
                             <!-- Word Length -->
                             <div class="metric-row border-bottom py-2 d-flex justify-content-between align-items-center">
                                 <div>
-                                    <span class="fw-semibold text-color">Avg Word Length</span>
+                                    <span class="fw-medium small text-color">Avg Word Length</span>
                                     <small class="d-block text-secondary">Average chars per word</small>
                                 </div>
-                                <span class="badge bg-secondary-subtle text-secondary fs-6 px-3 py-2 fw-medium">
+                                <span class="badge">
                                     {{ explanation.dense_metrics.avg_word_len }}
                                 </span>
                             </div>
@@ -176,12 +175,12 @@
                             <!-- Sentiment -->
                             <div class="metric-row py-2 d-flex justify-content-between align-items-center">
                                 <div>
-                                    <span class="fw-semibold text-color">VADER Sentiment Polarity</span>
-                                    <small class="d-block text-secondary">Positive vs Negative score ratio</small>
+                                    <span class="fw-medium small text-color">Sentiment Polarity</span>
+                                    <small class="d-block text-secondary">Positive vs Negative ratio</small>
                                 </div>
                                 <div class="d-flex gap-2">
-                                    <span class="badge bg-success-subtle text-success fs-7">Pos: {{ explanation.dense_metrics.positive_sentiment }}</span>
-                                    <span class="badge bg-danger-subtle text-danger fs-7">Neg: {{ explanation.dense_metrics.negative_sentiment }}</span>
+                                    <span class="badge">Pos: {{ explanation.dense_metrics.positive_sentiment }}</span>
+                                    <span class="badge">Neg: {{ explanation.dense_metrics.negative_sentiment }}</span>
                                 </div>
                             </div>
                         </div>
@@ -190,18 +189,18 @@
 
                 <!-- Explanation / Word Contribution -->
                 <div class="col-md-6">
-                    <div class="card shadow border-0 rounded-4 bg-card h-100">
+                    <div class="card h-100">
                         <div class="card-body p-4">
-                            <h5 class="fw-bold mb-4 text-secondary"><i class="bi bi-cpu text-primary me-2"></i>ML Logistic Regression Explainer</h5>
+                            <h5 class="fw-semibold mb-3 fs-6 text-color">ML Feature Influencers</h5>
                             
                             <!-- Positive (Fake) Influencing features -->
                             {% if explanation.fake_indicators %}
-                                <div class="mb-4">
-                                    <h6 class="fw-bold text-danger mb-2"><i class="bi bi-plus-circle me-1"></i>Top Indicators Pushing Towards FAKE</h6>
+                                <div class="mb-3">
+                                    <div class="small fw-medium text-secondary mb-2">Indicators Leaning Towards FAKE</div>
                                     <div class="d-flex flex-wrap gap-2">
                                         {% for feat in explanation.fake_indicators[:6] %}
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-3">
-                                                {{ feat.feature }} <small class="text-black-50">(+{{ "%.2f"|format(feat.contribution) }})</small>
+                                            <span class="badge bg-black text-white px-2.5 py-1">
+                                                {{ feat.feature }} <small class="text-white-50">(+{{ "%.2f"|format(feat.contribution) }})</small>
                                             </span>
                                         {% endfor %}
                                     </div>
@@ -211,11 +210,11 @@
                             <!-- Negative (Genuine) Influencing features -->
                             {% if explanation.genuine_indicators %}
                                 <div>
-                                    <h6 class="fw-bold text-success mb-2"><i class="bi bi-dash-circle me-1"></i>Top Indicators Pushing Towards GENUINE</h6>
+                                    <div class="small fw-medium text-secondary mb-2">Indicators Leaning Towards GENUINE</div>
                                     <div class="d-flex flex-wrap gap-2">
                                         {% for feat in explanation.genuine_indicators[:6] %}
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-3">
-                                                {{ feat.feature }} <small class="text-black-50">({{ "%.2f"|format(feat.contribution) }})</small>
+                                            <span class="badge border border-dark text-black px-2.5 py-1">
+                                                {{ feat.feature }} <small class="text-secondary">({{ "%.2f"|format(feat.contribution) }})</small>
                                             </span>
                                         {% endfor %}
                                     </div>
@@ -223,9 +222,8 @@
                             {% endif %}
 
                             {% if not explanation.fake_indicators and not explanation.genuine_indicators %}
-                                <div class="text-center text-secondary py-4">
-                                    <i class="bi bi-info-circle fs-3 mb-2"></i>
-                                    <p class="mb-0">No strong features triggered. This review has very standard values.</p>
+                                <div class="text-center text-secondary py-4 small">
+                                    <p class="mb-0">No dominant vocabulary features triggered. Linguistic pattern is balanced.</p>
                                 </div>
                             {% endif %}
                         </div>
@@ -238,8 +236,8 @@
     <!-- Footer -->
     <footer class="footer mt-auto py-4 border-top no-print">
         <div class="container text-center text-secondary">
-            <p class="mb-1">Fake Product Review Detection using Machine Learning</p>
-            <small>&copy; 2026 VeriTrust AI. Developed for B.Tech AI & ML Curriculum. Runs completely offline.</small>
+            <p class="mb-1 small">Fake Product Review Detection using Machine Learning</p>
+            <small class="text-muted">&copy; 2026 VeriTrust AI. Developed for B.Tech AI & ML Curriculum. Production-ready interface.</small>
         </div>
     </footer>
 

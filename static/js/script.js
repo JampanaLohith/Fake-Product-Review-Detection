@@ -1,19 +1,19 @@
 document.addEventListener("DOMContentLoaded", function () {
     // ----------------------------------------------------
-    // 1. Dark/Light Theme Switching
+    // 1. Dark/Light Theme Switching (Default: Light / Pure White SaaS)
     // ----------------------------------------------------
     const htmlElement = document.documentElement;
     const themeToggleBtn = document.getElementById("themeToggleBtn");
     
-    // Get stored theme or default to dark
-    const currentTheme = localStorage.getItem("theme") || "dark";
+    // Default to clean light SaaS mode
+    const currentTheme = localStorage.getItem("theme") || "light";
     htmlElement.setAttribute("data-theme", currentTheme);
     updateThemeButtonIcon(currentTheme);
 
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener("click", function () {
             const activeTheme = htmlElement.getAttribute("data-theme");
-            const newTheme = activeTheme === "light" ? "dark" : "light";
+            const newTheme = activeTheme === "dark" ? "light" : "dark";
             htmlElement.setAttribute("data-theme", newTheme);
             localStorage.setItem("theme", newTheme);
             updateThemeButtonIcon(newTheme);
@@ -23,17 +23,18 @@ document.addEventListener("DOMContentLoaded", function () {
     function updateThemeButtonIcon(theme) {
         if (!themeToggleBtn) return;
         const icon = themeToggleBtn.querySelector("i");
-        if (theme === "dark") {
-            icon.className = "bi bi-sun";
-            themeToggleBtn.className = "btn btn-outline-warning btn-icon-only";
-        } else {
-            icon.className = "bi bi-moon-stars";
-            themeToggleBtn.className = "btn btn-outline-secondary btn-icon-only";
+        if (icon) {
+            if (theme === "dark") {
+                icon.className = "bi bi-sun";
+            } else {
+                icon.className = "bi bi-moon";
+            }
         }
+        themeToggleBtn.className = "btn btn-outline-secondary btn-icon-only";
     }
 
     // ----------------------------------------------------
-    // 2. Character Counter & Form Validation (Home Page)
+    // 2. Character Counter & Form Validation
     // ----------------------------------------------------
     const reviewTextArea = document.getElementById("reviewTextArea");
     const charCounter = document.getElementById("charCounter");
@@ -54,15 +55,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
             
-            // Real-time character count badge update
+            // Clean monochromatic badge updates
             if (count > 0 && count < 15) {
-                charCounter.className = "badge bg-danger-subtle text-danger py-1.5 px-3 fw-medium ms-auto";
+                charCounter.className = "badge border border-dark text-black py-1 px-2 fw-medium ms-auto";
             } else if (count >= 15 && count <= 1800) {
-                charCounter.className = "badge bg-success-subtle text-success py-1.5 px-3 fw-medium ms-auto";
-            } else if (count > 1800) {
-                charCounter.className = "badge bg-warning-subtle text-warning py-1.5 px-3 fw-medium ms-auto";
+                charCounter.className = "badge bg-black text-white py-1 px-2 fw-medium ms-auto";
             } else {
-                charCounter.className = "badge bg-secondary-subtle text-secondary py-1.5 px-3 fw-medium ms-auto";
+                charCounter.className = "badge text-secondary py-1 px-2 fw-medium ms-auto";
             }
         });
     }
@@ -84,7 +83,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     validationFeedback.classList.add("d-none");
                     validationFeedback.style.display = "none";
                 }
-                // Show loading overlay
                 if (loadingOverlay) loadingOverlay.classList.remove("d-none");
             }
         });
@@ -102,13 +100,13 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             if (charCounter) {
                 charCounter.textContent = "0 / 2000 chars";
-                charCounter.className = "badge bg-secondary-subtle text-secondary py-1.5 px-3 fw-medium ms-auto";
+                charCounter.className = "badge text-secondary py-1 px-2 fw-medium ms-auto";
             }
         });
     }
 
     // ----------------------------------------------------
-    // 3. Inject Review Samples (Home Page)
+    // 3. Inject Review Samples (Fallback / Direct Mode)
     // ----------------------------------------------------
     const btnGenuineSample = document.getElementById("btnGenuineSample");
     const btnFakeSample = document.getElementById("btnFakeSample");
@@ -208,7 +206,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ----------------------------------------------------
-    // 4. Chart.js Result Visuals (Result Page)
+    // 4. Chart.js Result Visuals (Monochromatic SaaS Palette)
     // ----------------------------------------------------
     const resultChartCtx = document.getElementById("resultChart");
     const productDonutChartCtx = document.getElementById("productDonutChart");
@@ -217,24 +215,21 @@ document.addEventListener("DOMContentLoaded", function () {
         const labels = ['Genuine Prob', 'Fake Prob'];
         const data = [probGenuine, probFake];
         
-        // Dynamic color theme dependent chart colors
-        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim();
-        
         new Chart(resultChartCtx, {
             type: 'doughnut',
             data: {
                 labels: labels,
                 datasets: [{
                     data: data,
-                    backgroundColor: ['#22c55e', '#ef4444'],
-                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--card-bg').trim() || '#ffffff',
-                    borderWidth: 3
+                    backgroundColor: ['#000000', '#A1A1AA'],
+                    borderColor: '#ffffff',
+                    borderWidth: 2
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '70%',
+                cutout: '72%',
                 plugins: {
                     legend: {
                         display: false
@@ -261,15 +256,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 labels: labels,
                 datasets: [{
                     data: data,
-                    backgroundColor: ['#22c55e', '#ef4444'],
-                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--card-bg').trim() || '#ffffff',
-                    borderWidth: 3
+                    backgroundColor: ['#000000', '#D4D4D8'],
+                    borderColor: '#ffffff',
+                    borderWidth: 2
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '70%',
+                cutout: '72%',
                 plugins: {
                     legend: {
                         display: false
@@ -287,7 +282,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ----------------------------------------------------
-    // 5. Chart.js Dashboard Visuals (Dashboard Page)
+    // 5. Chart.js Dashboard Visuals (Clean SaaS Monochromatic Bar Chart)
     // ----------------------------------------------------
     const modelCompareChartCtx = document.getElementById("modelCompareChart");
     if (modelCompareChartCtx && typeof lrMetrics !== 'undefined' && typeof rfMetrics !== 'undefined') {
@@ -301,14 +296,14 @@ document.addEventListener("DOMContentLoaded", function () {
                     {
                         label: 'Logistic Regression (Primary)',
                         data: [lrMetrics.accuracy, lrMetrics.precision, lrMetrics.recall, lrMetrics.f1_score],
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 6
+                        backgroundColor: '#000000',
+                        borderRadius: 4
                     },
                     {
                         label: 'Random Forest (Comparison)',
                         data: [rfMetrics.accuracy, rfMetrics.precision, rfMetrics.recall, rfMetrics.f1_score],
-                        backgroundColor: '#8b5cf6',
-                        borderRadius: 6
+                        backgroundColor: '#A1A1AA',
+                        borderRadius: 4
                     }
                 ]
             },
@@ -319,24 +314,27 @@ document.addEventListener("DOMContentLoaded", function () {
                     legend: {
                         position: 'top',
                         labels: {
-                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim()
+                            boxWidth: 12,
+                            font: { family: 'Inter', size: 12 },
+                            color: '#000000'
                         }
                     }
                 },
                 scales: {
                     x: {
                         grid: { display: false },
-                        ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() }
+                        ticks: { font: { family: 'Inter' }, color: '#71717A' }
                     },
                     y: {
                         min: 0,
                         max: 1.0,
                         ticks: {
                             callback: function(value) { return (value * 100) + "%"; },
-                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim()
+                            font: { family: 'Inter' },
+                            color: '#71717A'
                         },
                         grid: {
-                            color: getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim()
+                            color: '#E5E5E5'
                         }
                     }
                 }
@@ -346,7 +344,6 @@ document.addEventListener("DOMContentLoaded", function () {
         // ----------------------------------------------------
         // 6. Confusion Matrix Rendering (Dashboard Page)
         // ----------------------------------------------------
-        // Matrix elements: TN, FP, FN, TP
         const cm = lrMetrics.confusion_matrix;
         const cellTN = document.getElementById("cellTN");
         const cellFP = document.getElementById("cellFP");
@@ -407,7 +404,6 @@ document.addEventListener("DOMContentLoaded", function () {
     if (btnDownloadPDF && pdfReportContent) {
         btnDownloadPDF.addEventListener("click", function () {
             const activeTheme = htmlElement.getAttribute("data-theme");
-            // Temporarily set light theme for clean PDF background rendering
             htmlElement.setAttribute("data-theme", "light");
             
             const opt = {
@@ -418,7 +414,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
-            // Custom dynamic filename if prediction ID is present
             const titleElem = document.querySelector(".pdf-header small");
             if (titleElem) {
                 const text = titleElem.textContent;
@@ -428,16 +423,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
 
-            // Temporarily toggle elements to look better in PDF
             const pdfHeader = pdfReportContent.querySelector(".pdf-header");
             if (pdfHeader) pdfHeader.classList.remove("d-none");
 
             html2pdf().set(opt).from(pdfReportContent).save().then(() => {
-                // Restore theme and hide PDF header
                 htmlElement.setAttribute("data-theme", activeTheme);
                 if (pdfHeader) pdfHeader.classList.add("d-none");
             });
         });
     }
-
 });
