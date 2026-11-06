@@ -83,7 +83,7 @@ FakeReviewDetection/
 ├── app.py                  # Web application controller, routing, database schema, and SQLite DB connector.
 ├── model.py                # Preprocessing core, feature engineering, URL parser, batch scraper, and Local Explainer.
 ├── train_model.py          # Dataset generator, model comparison, training, and serialization.
-├── download_nltk_github.py # CDN downloader utility to fetch NLTK corpuses from GitHub CDN (fast build-time setup).
+├── dataset_manager.py      # Curates benchmark dataset and manages training/baseline data splits.
 ├── requirements.txt        # Python package dependencies.
 ├── dataset.csv             # Generated training review dataset.
 ├── model.pkl               # Serialized Logistic Regression model.
@@ -107,7 +107,7 @@ FakeReviewDetection/
 
 - **`requirements.txt`**: Specifies all required Python libraries.
 - **`model.py`**: Defines standard text cleaning routines, custom feature extraction (caps, exclamations, sentiment), URL parsing, and the local mathematical explainer.
-- **`download_nltk_github.py`**: CDN downloader utility that bypasses slow NLTK mirrors by downloading corpuses directly from raw GitHub CDN paths.
+- **`dataset_manager.py`**: Manages real-world and baseline review corpora to guarantee balanced, leak-free training data.
 - **`train_model.py`**: Automatically constructs a mock dataset of 720 records, trains both models, runs 5-fold cross-validation, and saves the binary files.
 - **`app.py`**: Handles incoming HTTP POST requests, runs single and batch predictions, writes to SQLite tables, and compiles statistics for the dashboard.
 - **`static/css/style.css`**: Provides a premium dark/light mode responsive layout, styling indicators, card overlays, and transitions.

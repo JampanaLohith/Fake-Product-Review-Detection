@@ -267,7 +267,6 @@ def main():
     print("Saving pickles to disk...")
     # Random Forest is saved as primary model.pkl for prediction accuracy and robust non-linear boundaries
     joblib.dump(rf_model, "model.pkl")
-    joblib.dump(rf_model, "rf_model.pkl")
     # Logistic Regression is saved as baseline and explainer model
     joblib.dump(lr_model, "lr_model.pkl")
     joblib.dump(vectorizer, "vectorizer.pkl")
