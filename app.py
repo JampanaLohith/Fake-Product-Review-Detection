@@ -14,7 +14,7 @@ logger = logging.getLogger("VeriTrust")
 # Import our helper functions
 from model import (
     preprocess_text, extract_dense_features, explain_prediction, classify_probability,
-    extract_product_name, fetch_product_reviews, detect_platform, is_safe_url
+    extract_product_name, fetch_product_reviews, detect_platform, is_safe_url, resolve_canonical_url
 )
 
 app = Flask(__name__)
@@ -260,7 +260,6 @@ def predict_product():
     is_safe, err_msg = is_safe_url(product_url)
     if not is_safe:
         err_text = f"Invalid or restricted URL: {err_msg}"
-        flash(err_text, "warning")
         extraction_failure = {
             "title": "Unable to retrieve actual product reviews",
             "reason": err_text,
@@ -271,20 +270,23 @@ def predict_product():
         return render_template('index.html', extraction_failure=extraction_failure), 200
 
     try:
-        product_name = extract_product_name(product_url)
-        reviews, platform_name, error_msg = fetch_product_reviews(product_url, product_name)
+        # Resolve canonical URL to handle shortened links (amzn.in, amzn.to, fkrt.it, dl.flipkart.com)
+        canonical_url, _, _ = resolve_canonical_url(product_url)
+        target_url = canonical_url if canonical_url else product_url
+
+        product_name = extract_product_name(target_url)
+        reviews, platform_name, error_msg = fetch_product_reviews(target_url, product_name)
         
         # When 0 real reviews could be extracted, inform user truthfully.
         # DO NOT run ML model on empty data. DO NOT generate synthetic reviews or authenticity score.
         if not reviews or len(reviews) == 0:
             err_title = "Unable to retrieve actual product reviews"
             err_detail = error_msg or f"Access to {platform_name} was restricted by third-party anti-bot protections or no customer reviews exist."
-            flash(f"{err_title}. {err_detail}", "warning")
             extraction_failure = {
                 "title": err_title,
                 "reason": err_detail,
                 "platform": platform_name,
-                "url": product_url,
+                "url": target_url if target_url != product_url else product_url,
                 "product_name": product_name
             }
             return render_template('index.html', extraction_failure=extraction_failure), 200

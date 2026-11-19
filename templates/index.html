@@ -99,12 +99,12 @@
                             <h5 class="fw-bold mb-0 text-color">{{ extraction_failure.title }}</h5>
                             <span class="badge border border-dark text-black bg-white">Platform: {{ extraction_failure.platform }}</span>
                         </div>
-                        <p class="text-secondary small mb-2">
-                            <strong>Target:</strong> {{ extraction_failure.product_name }} &bull; <span class="text-truncate d-inline-block align-bottom" style="max-width: 400px;">{{ extraction_failure.url }}</span>
+                        <p class="text-secondary small mb-2 text-break">
+                            <strong>Target:</strong> {{ extraction_failure.product_name }} &bull; <span class="d-inline-block text-break">{{ extraction_failure.url }}</span>
                         </p>
                         <div class="p-3 border rounded-2 bg-white mb-3">
                             <span class="small fw-semibold text-secondary d-block text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Failure Reason / Technical Diagnostics:</span>
-                            <p class="mb-0 small text-color"><i class="bi bi-info-circle me-1"></i> {{ extraction_failure.reason }}</p>
+                            <p class="mb-0 small text-color text-break"><i class="bi bi-info-circle me-1"></i> {{ extraction_failure.reason }}</p>
                         </div>
                         <div class="d-flex gap-2 flex-wrap">
                             <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('productUrlInput').focus(); window.scrollTo({top: document.getElementById('analyzer').offsetTop - 50, behavior: 'smooth'});">
@@ -130,7 +130,7 @@
                 Submit any e-commerce product link to evaluate customer review authenticity, extract stylometric patterns, and detect fraudulent opinion spam.
             </p>
             <div class="d-flex justify-content-center gap-2 flex-wrap text-secondary small">
-                <span class="badge bg-secondary-subtle px-3 py-1.5"><i class="bi bi-check2 me-1"></i> 100% Benchmark Accuracy</span>
+                <span class="badge bg-secondary-subtle px-3 py-1.5"><i class="bi bi-cpu me-1"></i> Random Forest &amp; Stylometrics</span>
                 <span class="badge bg-secondary-subtle px-3 py-1.5"><i class="bi bi-check2 me-1"></i> Stylometrics &amp; VADER</span>
                 <span class="badge bg-secondary-subtle px-3 py-1.5"><i class="bi bi-check2 me-1"></i> Explainable Model Weights</span>
             </div>
@@ -146,7 +146,7 @@
                         </div>
                         <div>
                             <h5 class="mb-0 fw-semibold">Live E-Commerce URL Analyzer</h5>
-                            <small class="text-secondary">Supported platforms: Amazon, Flipkart, Myntra, Meesho</small>
+                            <small class="text-secondary">Supported platforms: Amazon, Flipkart, Myntra, Meesho, Ajio, Croma, Reliance Digital</small>
                         </div>
                     </div>
                     <div class="d-flex gap-1 flex-wrap">
@@ -154,6 +154,9 @@
                         <span class="badge bg-secondary-subtle"><i class="bi bi-bag-check me-1"></i> Flipkart</span>
                         <span class="badge bg-secondary-subtle"><i class="bi bi-tag-fill me-1"></i> Myntra</span>
                         <span class="badge bg-secondary-subtle"><i class="bi bi-cart3 me-1"></i> Meesho</span>
+                        <span class="badge bg-secondary-subtle"><i class="bi bi-shop me-1"></i> Ajio</span>
+                        <span class="badge bg-secondary-subtle"><i class="bi bi-laptop me-1"></i> Croma</span>
+                        <span class="badge bg-secondary-subtle"><i class="bi bi-phone me-1"></i> Reliance Digital</span>
                     </div>
                 </div>
 

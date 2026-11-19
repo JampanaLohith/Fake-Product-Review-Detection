@@ -237,10 +237,14 @@ def detect_platform(url):
         return "Myntra"
     elif 'meesho' in url_lower or 'mshp' in url_lower:
         return "Meesho"
-    elif 'nykaa' in url_lower:
-        return "Nykaa"
     elif 'ajio' in url_lower:
         return "Ajio"
+    elif 'croma' in url_lower:
+        return "Croma"
+    elif 'reliancedigital' in url_lower:
+        return "Reliance Digital"
+    elif 'nykaa' in url_lower:
+        return "Nykaa"
     else:
         try:
             from urllib.parse import urlparse
@@ -255,7 +259,7 @@ def detect_platform(url):
 
 def extract_product_name(url):
     """
-    Parses an e-commerce URL (Amazon, Flipkart, Myntra, Meesho, etc.)
+    Parses an e-commerce URL (Amazon, Flipkart, Myntra, Meesho, Ajio, Croma, etc.)
     and extracts a clean, human-readable product title.
     """
     if not isinstance(url, str):
@@ -264,7 +268,7 @@ def extract_product_name(url):
     url = url.strip()
     
     # 1. Amazon pattern: domain.com/Product-Name/dp/B0...
-    amazon_match = re.search(r'amazon\.[a-z\.]+/([^/]+)/dp/', url, re.IGNORECASE)
+    amazon_match = re.search(r'amazon\.[a-z\.]+/([^/]+)/(?:dp|gp/product)/', url, re.IGNORECASE)
     if amazon_match:
         name = amazon_match.group(1).replace('-', ' ').replace('_', ' ')
         return name.title()
@@ -286,8 +290,26 @@ def extract_product_name(url):
     if meesho_match:
         name = meesho_match.group(1).replace('-', ' ').replace('_', ' ')
         return name.title()
+
+    # 5. Ajio pattern: ajio.com/product-name/p/id
+    ajio_match = re.search(r'ajio\.com/(?:[^/]+/)*([^/]+)/p/', url, re.IGNORECASE)
+    if ajio_match:
+        name = ajio_match.group(1).replace('-', ' ').replace('_', ' ')
+        return name.title()
+
+    # 6. Croma pattern: croma.com/product-name/p/id
+    croma_match = re.search(r'croma\.com/([^/]+)/p/', url, re.IGNORECASE)
+    if croma_match:
+        name = croma_match.group(1).replace('-', ' ').replace('_', ' ')
+        return name.title()
+
+    # 7. Reliance Digital pattern: reliancedigital.in/product-name/p/id
+    rd_match = re.search(r'reliancedigital\.in/([^/]+)/p/', url, re.IGNORECASE)
+    if rd_match:
+        name = rd_match.group(1).replace('-', ' ').replace('_', ' ')
+        return name.title()
         
-    # 5. General URL fallback: parse last meaningful path segment
+    # 8. General URL fallback: parse last meaningful slug
     try:
         from urllib.parse import urlparse
         parsed = urlparse(url)
@@ -298,7 +320,7 @@ def extract_product_name(url):
                 if '-' in seg or '_' in seg:
                     name = seg.replace('-', ' ').replace('_', ' ')
                     return name.title()
-            if segments[-1]:
+            if segments[-1] and len(segments[-1]) > 3:
                 return segments[-1].replace('-', ' ').replace('_', ' ').title()
     except Exception:
         pass
@@ -306,81 +328,23 @@ def extract_product_name(url):
     return "E-Commerce Product"
 
 
-def _generate_product_reviews(product_name, platform, url=""):
+def _extract_amazon_asin(url):
     """
-    Generates a realistic batch of customer reviews tailored specifically
-    to product_name when cloud scrapers encounter anti-bot 403 blocks.
-    Determines realistic proportion based on product/URL context.
+    Extracts the 10-character Amazon Standard Identification Number (ASIN)
+    from full product URLs, short links, or reviews endpoints.
     """
-    import random
-
-    url_lower = (url or "").lower()
-    name_lower = (product_name or "").lower()
-
-    # Detect suspicious keywords in URL or product name
-    is_suspicious = any(k in url_lower or k in name_lower for k in [
-        "scam", "clone", "replica", "fake", "copy", "firstcopy", "cheap-deal", "free-gift", "unbranded"
-    ])
-
-    # Genuine positive customer reviews
-    gen_pos = [
-        {"review_text": f"I purchased this {product_name} last week. The overall build and functionality match the description perfectly. Delivery was quick and packaging was secure.", "rating": 5.0, "author": "Verified Customer", "verified": True},
-        {"review_text": f"Solid product. The {product_name} works great for daily tasks. Good value for money compared to alternatives in the market.", "rating": 4.5, "author": "Verified Customer", "verified": True},
-        {"review_text": f"Very satisfied with {product_name}. The finishing is nice and performance has been very reliable so far.", "rating": 4.0, "author": "Verified Buyer", "verified": True},
-        {"review_text": f"Decent quality {product_name}. Had a minor doubt during initial setup, but customer support helped resolve it quickly.", "rating": 4.0, "author": "Verified Buyer", "verified": True},
-        {"review_text": f"Good purchase! The {product_name} arrived on schedule. Meets my expectations for regular usage.", "rating": 4.5, "author": "Verified Customer", "verified": True},
-        {"review_text": f"Bought this {product_name} during the sale. Build quality feels sturdy and it performs as promised.", "rating": 5.0, "author": "Verified Buyer", "verified": True},
-        {"review_text": f"Using this {product_name} for over two weeks now. Battery backup and response speed are surprisingly good for this budget.", "rating": 4.5, "author": "Verified Customer", "verified": True},
-        {"review_text": f"Neat packaging and authentic {product_name}. Works exactly as advertised in the product specifications.", "rating": 5.0, "author": "Verified Buyer", "verified": True},
+    if not isinstance(url, str):
+        return None
+    patterns = [
+        r'/(?:dp|gp/product|product-reviews|gp/aw/d)/([A-Z0-9]{10})',
+        r'[?&]asin=([A-Z0-9]{10})',
+        r'/([A-Z0-9]{10})(?:[/?&]|$)'
     ]
-
-    # Genuine critical/mixed customer reviews
-    gen_neg = [
-        {"review_text": f"The {product_name} works fine, but the user manual could be clearer. Average overall experience.", "rating": 3.0, "author": "Verified Customer", "verified": True},
-        {"review_text": f"Product performance of {product_name} is acceptable, but outer packaging was slightly dented upon arrival.", "rating": 3.0, "author": "Verified Buyer", "verified": True},
-        {"review_text": f"The {product_name} is okay for basic needs, but lags under heavy usage. Decent for the price.", "rating": 2.5, "author": "Verified Customer", "verified": True},
-        {"review_text": f"Delivery took two days longer than expected, though the {product_name} itself arrived in perfect working order.", "rating": 3.5, "author": "Verified Customer", "verified": True},
-    ]
-
-    # Fake positive opinion spam (all caps, extreme sentiment, hype)
-    fake_pos = [
-        {"review_text": f"!!! BEST {product_name} IN THE WORLD !!! AMAZING PERFECT QUALITY !!! MUST BUY IMMEDIATELY !!! YOU WILL NOT REGRET IT !!!", "rating": 5.0, "author": "Anonymous User", "verified": False},
-        {"review_text": f"OMG!!! Absolute perfection! This {product_name} is the best product I have ever bought in my entire life! FIVE STARS WOW WOW WOW!!!", "rating": 5.0, "author": "User_993", "verified": False},
-        {"review_text": f"SUPERB QUALITY! Outstanding seller! Fast shipping, packed nicely. Buy without hesitation! 5 STARS!", "rating": 5.0, "author": "Top Reviewer", "verified": False},
-        {"review_text": f"ABSOLUTELY OUTSTANDING {product_name}!!! 10/10 STARS! DO NOT HESITATE BUY IT NOW NOW NOW!!!", "rating": 5.0, "author": "Super Buyer", "verified": False},
-    ]
-
-    # Fake negative toxic attack reviews (exaggerated hate, clickbait terms)
-    fake_neg = [
-        {"review_text": f"!!! COMPLETE SCAM !!! DO NOT BUY THIS {product_name} !!! TOTAL WASTE OF MONEY AND TIME !!!", "rating": 1.0, "author": "Angry Customer", "verified": False},
-        {"review_text": f"!!! WORST {product_name} EVER !!! BROKE IN ONE MINUTE !!! TOTAL TRASH !!! RUN AWAY FROM THIS SELLER !!!", "rating": 1.0, "author": "Unsatisfied", "verified": False},
-        {"review_text": f"FAKE PRODUCT ALERT! Defective garbage item sent by criminal seller! AVOID AT ALL COSTS!!!", "rating": 1.0, "author": "Buyer Alert", "verified": False},
-        {"review_text": f"DO NOT TRUST THESE REVIEWS! Complete fraud! Broke immediately upon opening box! TRASH!", "rating": 1.0, "author": "Disappointed", "verified": False},
-    ]
-
-    reviews_pool = []
-    if is_suspicious:
-        # Suspicious item: heavily weighted towards fake reviews (Low Trust)
-        reviews_pool += random.sample(fake_pos, 3)
-        reviews_pool += random.sample(fake_neg, 4)
-        reviews_pool += random.sample(gen_pos, 2)
-        reviews_pool += random.sample(gen_neg, 2)
-    else:
-        # Legitimate brand/product: realistic e-commerce distribution (80-85% genuine, ~15% spam/flagged)
-        reviews_pool += gen_pos[:7]               # 7 genuine positive
-        reviews_pool += gen_neg[:3]               # 3 genuine mixed/critical
-        reviews_pool += [random.choice(fake_pos)] # 1 promotional spam
-        reviews_pool += [random.choice(fake_neg)] # 1 smear attack
-        # Total = 12 reviews (10 genuine, 2 fake -> ~83.3% Authenticity -> HIGHLY TRUSTED)
-
-    reviews = []
-    for item in reviews_pool:
-        item_copy = dict(item)
-        item_copy["source"] = f"Product URL Analysis - {platform}"
-        reviews.append(item_copy)
-
-    random.shuffle(reviews)
-    return reviews
+    for pat in patterns:
+        m = re.search(pat, url, re.IGNORECASE)
+        if m:
+            return m.group(1).upper()
+    return None
 
 
 def is_safe_url(url):
@@ -404,6 +368,9 @@ def is_safe_url(url):
         
     if parsed.scheme not in ("http", "https"):
         return False, "Only HTTP and HTTPS URLs are supported."
+
+    if parsed.port and parsed.port not in (80, 443):
+        return False, f"Port {parsed.port} is not permitted. Only standard HTTP (80) and HTTPS (443) ports are allowed."
         
     hostname = parsed.hostname
     if not hostname:
@@ -434,44 +401,93 @@ def is_safe_url(url):
     return True, url
 
 
-def safe_fetch_url(url, timeout=12, max_redirects=3):
+def safe_fetch_url(url, timeout=12, max_redirects=6, return_final_url=False):
     """
     Safely executes an HTTP GET request, re-validating the destination and each
-    redirect hop against SSRF restrictions.
+    redirect hop against SSRF restrictions, redirect loops, and response size limits.
     """
     import requests
     from urllib.parse import urljoin
 
     current_url = url
     session = _get_session()
+    visited_urls = set()
+    MAX_RESPONSE_BYTES = 5 * 1024 * 1024  # 5 MB safe limit
     
     for _ in range(max_redirects + 1):
+        if current_url in visited_urls:
+            err = "Redirect loop detected."
+            return (None, current_url, err) if return_final_url else (None, err)
+        visited_urls.add(current_url)
+
         is_safe, msg = is_safe_url(current_url)
         if not is_safe:
-            return None, msg
+            return (None, current_url, msg) if return_final_url else (None, msg)
             
         try:
-            resp = session.get(current_url, timeout=timeout, allow_redirects=False)
+            resp = session.get(current_url, timeout=timeout, allow_redirects=False, stream=True)
             if resp.is_redirect or resp.status_code in (301, 302, 303, 307, 308):
                 location = resp.headers.get("Location")
                 if not location:
                     break
                 current_url = urljoin(current_url, location)
                 continue
-            return resp, None
-        except requests.exceptions.Timeout:
-            return None, "Connection timed out while contacting e-commerce server."
-        except Exception as e:
-            return None, f"Network request failed: {e}"
             
-    return None, "Too many redirects encountered."
+            # Read response with size bounding to avoid memory exhaustion
+            cl = resp.headers.get("Content-Length")
+            if cl and cl.isdigit() and int(cl) > MAX_RESPONSE_BYTES:
+                err = "Response size exceeds safe limit (5 MB)."
+                return (None, current_url, err) if return_final_url else (None, err)
+
+            content_chunks = []
+            bytes_read = 0
+            for chunk in resp.iter_content(chunk_size=65536):
+                bytes_read += len(chunk)
+                if bytes_read > MAX_RESPONSE_BYTES:
+                    err = "Response size exceeds safe limit (5 MB)."
+                    return (None, current_url, err) if return_final_url else (None, err)
+                content_chunks.append(chunk)
+            resp._content = b"".join(content_chunks)
+
+            return (resp, current_url, None) if return_final_url else (resp, None)
+        except requests.exceptions.Timeout:
+            err = "Connection timed out while contacting e-commerce server."
+            return (None, current_url, err) if return_final_url else (None, err)
+        except Exception as e:
+            err = f"Network request failed: {e}"
+            return (None, current_url, err) if return_final_url else (None, err)
+            
+    err = "Too many redirects encountered."
+    return (None, current_url, err) if return_final_url else (None, err)
+
+
+def resolve_canonical_url(url, timeout=12, max_redirects=6):
+    """
+    Safely resolves shortened or vanity e-commerce URLs (e.g., amzn.in, amzn.to, fkrt.it, dl.flipkart.com)
+    to their full destination product URL while enforcing SSRF checks on each hop.
+    
+    Returns:
+        tuple: (canonical_url: str, resp_or_none, error_msg: str or None)
+    """
+    is_safe, msg = is_safe_url(url)
+    if not is_safe:
+        return url, None, msg
+        
+    result = safe_fetch_url(url, timeout=timeout, max_redirects=max_redirects, return_final_url=True)
+    if isinstance(result, tuple) and len(result) == 3:
+        resp, final_url, err = result
+        return (final_url or url), resp, err
+    elif isinstance(result, tuple) and len(result) == 2:
+        resp, err = result
+        return url, resp, err
+    return url, None, "Unable to resolve URL."
 
 
 def fetch_product_reviews(url, product_name):
     """
     Main entry point for fetching real customer reviews from e-commerce product URLs.
-    Validates URLs against SSRF and platform restrictions, extracts available reviews,
-    and returns deduplicated real customer data.
+    Validates URLs against SSRF and platform restrictions, resolves shortened URLs,
+    extracts available reviews across supported platforms, and returns deduplicated real customer data.
     
     Returns:
         tuple: (reviews_list, platform_name, error_message)
@@ -480,21 +496,31 @@ def fetch_product_reviews(url, product_name):
     if not is_safe:
         return [], "Unknown", err
 
-    platform = detect_platform(url)
+    # 1. Resolve canonical URL to handle shortened links (amzn.in, amzn.to, fkrt.it, dl.flipkart.com)
+    canonical_url, _, _ = resolve_canonical_url(url)
+    target_url = canonical_url if canonical_url else url
+
+    platform = detect_platform(target_url)
 
     reviews = []
     error_reason = None
 
     if platform == "Flipkart":
-        reviews, error_reason = _scrape_flipkart_reviews(url)
+        reviews, error_reason = _scrape_flipkart_reviews(target_url)
     elif platform == "Amazon":
-        reviews, error_reason = _scrape_amazon_reviews(url)
+        reviews, error_reason = _scrape_amazon_reviews(target_url)
     elif platform == "Myntra":
-        reviews, error_reason = _scrape_myntra_reviews(url)
+        reviews, error_reason = _scrape_myntra_reviews(target_url)
     elif platform == "Meesho":
-        reviews, error_reason = _scrape_meesho_reviews(url)
+        reviews, error_reason = _scrape_meesho_reviews(target_url)
+    elif platform == "Ajio":
+        reviews, error_reason = _scrape_ajio_reviews(target_url)
+    elif platform == "Croma":
+        reviews, error_reason = _scrape_croma_reviews(target_url)
+    elif platform == "Reliance Digital":
+        reviews, error_reason = _scrape_reliance_digital_reviews(target_url)
     else:
-        reviews, error_reason = _scrape_generic_reviews(url)
+        reviews, error_reason = _scrape_generic_reviews(target_url)
 
     # Deduplicate reviews based on normalized review text
     unique_reviews = []
@@ -571,13 +597,22 @@ def _scrape_flipkart_reviews(url):
                     rating = float(rating_tag.get_text(strip=True))
                 except Exception:
                     pass
+            # Check for certified buyer indicator without fabricating verification
+            ver_tag = block.find(string=re.compile(r"certified buyer|verified purchase", re.IGNORECASE))
+            verified = True if ver_tag else None
+
+            item_match = re.search(r'/p/(itm[a-zA-Z0-9]+)', url)
+            product_id = item_match.group(1) if item_match else None
+
             reviews.append({
                 "review_text": review_text,
                 "rating": rating,
                 "author": "Flipkart Customer",
                 "date": None,
-                "verified": True,
-                "source": "Live Scraped - Flipkart"
+                "verified": verified,
+                "source": "Live Scraped - Flipkart",
+                "product_id": product_id,
+                "product_url": url
             })
 
         if not reviews:
@@ -587,19 +622,50 @@ def _scrape_flipkart_reviews(url):
         return [], f"Extraction parsing error: {e}"
 
 
+def _detect_amazon_bot_challenge(resp):
+    """
+    Detects whether an Amazon HTTP response represents a CAPTCHA or anti-bot challenge,
+    even when served with HTTP 200 OK.
+    Returns:
+        tuple: (is_challenge: bool, reason: str or None)
+    """
+    if not resp or not hasattr(resp, 'text'):
+        return False, None
+
+    text = resp.text.lower()
+    
+    # 1. Page title checks
+    if "<title>robot check</title>" in text or "<title>amazon captcha</title>" in text:
+        return True, "Amazon anti-bot challenge encountered (Robot Check CAPTCHA). Cloud hosting IPs are blocked from automated extraction."
+        
+    # 2. Form actions and URLs
+    if "/errors/validatecaptcha" in text or "validatecaptcha" in text:
+        return True, "Amazon anti-bot challenge encountered (validateCaptcha form required). Cloud hosting IPs are blocked from automated extraction."
+
+    # 3. Explicit challenge prompts and automated access disclaimers
+    if "enter the characters you see below" in text or "type the characters you see in this image" in text:
+        return True, "Amazon anti-bot challenge encountered (Image CAPTCHA). Cloud hosting IPs are blocked from automated extraction."
+
+    if "to discuss automated access to amazon data" in text or "api-services-support@amazon.com" in text:
+        return True, "Amazon automated access restriction encountered. Cloud hosting IPs are blocked from automated extraction."
+
+    return False, None
+
+
 def _scrape_amazon_reviews(url):
     """Attempts to scrape customer reviews from Amazon."""
     try:
         from bs4 import BeautifulSoup
         from urllib.parse import urlparse
         reviews_url = url
-        if "/dp/" in url or "/gp/product/" in url:
-            asin_match = re.search(r"/(?:dp|gp/product)/([A-Z0-9]{10})", url, re.IGNORECASE)
-            if asin_match:
-                parsed = urlparse(url)
-                netloc = parsed.netloc.lower()
-                clean_host = netloc[4:] if netloc.startswith("www.") else netloc
-                reviews_url = f"https://www.{clean_host}/product-reviews/{asin_match.group(1)}"
+        asin = _extract_amazon_asin(url)
+        if asin:
+            parsed = urlparse(url)
+            netloc = parsed.netloc.lower()
+            clean_host = netloc[4:] if netloc.startswith("www.") else netloc
+            if "amazon." not in clean_host:
+                clean_host = "amazon.in"
+            reviews_url = f"https://www.{clean_host}/product-reviews/{asin}?pageNumber=1&sortBy=recent"
 
         resp, err = safe_fetch_url(reviews_url, timeout=12)
         if not resp:
@@ -609,18 +675,25 @@ def _scrape_amazon_reviews(url):
         if resp.status_code != 200:
             return [], f"Amazon returned HTTP error status {resp.status_code}."
 
+        # Detect CAPTCHA and Robot Check challenges served with HTTP 200 OK
+        is_challenge, challenge_msg = _detect_amazon_bot_challenge(resp)
+        if is_challenge:
+            return [], challenge_msg
+
         soup = BeautifulSoup(resp.text, "html.parser")
-        review_divs = soup.select("div[data-hook='review']")
+        review_divs = soup.select("div[data-hook='review'], div.review, div[id^='customer_review-']")
         reviews = []
         for div in review_divs[:30]:
-            body = div.select_one("span[data-hook='review-body']")
+            body = div.select_one("span[data-hook='review-body'], div[data-hook='review-collapsed']")
+            if not body:
+                body = div.select_one(".review-text-content, .review-text")
             if not body:
                 continue
             review_text = body.get_text(separator=" ", strip=True)
             if len(review_text) < 15:
                 continue
             rating = None
-            rating_tag = div.select_one("i[data-hook='review-star-rating']")
+            rating_tag = div.select_one("i[data-hook='review-star-rating'], i.a-icon-star")
             if rating_tag:
                 m = re.search(r"(\d+\.?\d*)", rating_tag.get_text())
                 if m:
@@ -628,22 +701,35 @@ def _scrape_amazon_reviews(url):
                         rating = float(m.group(1))
                     except Exception:
                         pass
-            author_tag = div.select_one("span.a-profile-name")
+            author_tag = div.select_one("span.a-profile-name, span.author")
             author = author_tag.get_text(strip=True) if author_tag else "Amazon Customer"
             date_tag = div.select_one("span[data-hook='review-date']")
             date = date_tag.get_text(strip=True) if date_tag else None
-            verified = bool(div.select_one("span[data-hook='avp-badge']"))
+            avp_badge = div.select_one("span[data-hook='avp-badge']")
+            verified = True if avp_badge else None
             reviews.append({
                 "review_text": review_text,
                 "rating": rating,
                 "author": author,
                 "date": date,
                 "verified": verified,
-                "source": "Live Scraped - Amazon"
+                "source": "Live Scraped - Amazon",
+                "product_id": asin,
+                "product_url": url
             })
 
         if not reviews:
-            return [], "Page loaded successfully, but zero review elements were found in Amazon HTML. Access may have been restricted or product has no written reviews."
+            # Check for verified empty reviews vs dynamic client rendering
+            no_reviews_indicator = soup.find(string=re.compile(r"no customer reviews|be the first to review|not yet reviewed", re.IGNORECASE))
+            if no_reviews_indicator:
+                return [], "This product currently has no written customer reviews."
+            
+            # Check if product title exists to confirm it is a valid product page
+            product_title_tag = soup.select_one("#productTitle, #title, span#cr-arp-byline, h1")
+            if product_title_tag or asin:
+                return [], "Product page loaded, but reviews are rendered dynamically via client-side JavaScript and cannot be retrieved via static HTML scraping."
+
+            return [], "Page loaded successfully, but zero review elements were found in Amazon HTML. Access may have been restricted or content requires dynamic JavaScript rendering."
         return reviews, None
     except Exception as e:
         return [], f"Extraction parsing error: {e}"
@@ -673,8 +759,10 @@ def _scrape_myntra_reviews(url):
                 "rating": None,
                 "author": "Myntra Customer",
                 "date": None,
-                "verified": True,
-                "source": "Live Scraped - Myntra"
+                "verified": None,
+                "source": "Live Scraped - Myntra",
+                "product_id": None,
+                "product_url": url
             })
         if not reviews:
             return [], "Page loaded, but zero review elements were found. Myntra relies heavily on client-side React rendering."
@@ -707,11 +795,122 @@ def _scrape_meesho_reviews(url):
                 "rating": None,
                 "author": "Meesho Customer",
                 "date": None,
-                "verified": True,
-                "source": "Live Scraped - Meesho"
+                "verified": None,
+                "source": "Live Scraped - Meesho",
+                "product_id": None,
+                "product_url": url
             })
         if not reviews:
             return [], "Page loaded, but zero review elements were found in Meesho HTML."
+        return reviews, None
+    except Exception as e:
+        return [], f"Extraction parsing error: {e}"
+
+
+def _scrape_ajio_reviews(url):
+    """Attempts to scrape reviews from an Ajio product page."""
+    try:
+        from bs4 import BeautifulSoup
+        resp, err = safe_fetch_url(url, timeout=12)
+        if not resp:
+            return [], err or "Unable to connect to Ajio server."
+        if resp.status_code == 403 or resp.status_code == 503:
+            return [], f"Access blocked by Ajio anti-bot protections (HTTP {resp.status_code})."
+        if resp.status_code != 200:
+            return [], f"Ajio returned HTTP error status {resp.status_code}."
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+        review_divs = soup.select("div.review-card, div.user-review, div[class*='review-item'], div[class*='ReviewCard']")
+        reviews = []
+        for div in review_divs[:30]:
+            body = div.select_one("p.review-text, div.review-desc, p[class*='review']")
+            review_text = body.get_text(separator=" ", strip=True) if body else div.get_text(separator=" ", strip=True)
+            if len(review_text) < 15:
+                continue
+            reviews.append({
+                "review_text": review_text,
+                "rating": None,
+                "author": "Ajio Customer",
+                "date": None,
+                "verified": None,
+                "source": "Live Scraped - Ajio",
+                "product_id": None,
+                "product_url": url
+            })
+        if not reviews:
+            return [], "Page loaded, but zero review elements were found. Ajio renders customer reviews dynamically via client-side JavaScript."
+        return reviews, None
+    except Exception as e:
+        return [], f"Extraction parsing error: {e}"
+
+
+def _scrape_croma_reviews(url):
+    """Attempts to scrape reviews from a Croma product page."""
+    try:
+        from bs4 import BeautifulSoup
+        resp, err = safe_fetch_url(url, timeout=12)
+        if not resp:
+            return [], err or "Unable to connect to Croma server."
+        if resp.status_code == 403 or resp.status_code == 503:
+            return [], f"Access blocked by Croma anti-bot protections (HTTP {resp.status_code})."
+        if resp.status_code != 200:
+            return [], f"Croma returned HTTP error status {resp.status_code}."
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+        review_divs = soup.select("div.croma-review, div.bv-content-item, div[class*='review']")
+        reviews = []
+        for div in review_divs[:30]:
+            review_text = div.get_text(separator=" ", strip=True)
+            if len(review_text) < 15:
+                continue
+            reviews.append({
+                "review_text": review_text,
+                "rating": None,
+                "author": "Croma Customer",
+                "date": None,
+                "verified": None,
+                "source": "Live Scraped - Croma",
+                "product_id": None,
+                "product_url": url
+            })
+        if not reviews:
+            return [], "Page loaded, but review widgets require client-side JavaScript rendering (PowerReviews/BazaarVoice)."
+        return reviews, None
+    except Exception as e:
+        return [], f"Extraction parsing error: {e}"
+
+
+def _scrape_reliance_digital_reviews(url):
+    """Attempts to scrape reviews from a Reliance Digital product page."""
+    try:
+        from bs4 import BeautifulSoup
+        resp, err = safe_fetch_url(url, timeout=12)
+        if not resp:
+            return [], err or "Unable to connect to Reliance Digital server."
+        if resp.status_code == 403 or resp.status_code == 503:
+            return [], f"Access blocked by Reliance Digital anti-bot protections (HTTP {resp.status_code})."
+        if resp.status_code != 200:
+            return [], f"Reliance Digital returned HTTP error status {resp.status_code}."
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+        review_divs = soup.select("div.rd-review, div[class*='review']")
+        reviews = []
+        for div in review_divs[:30]:
+            review_text = div.get_text(separator=" ", strip=True)
+            if len(review_text) < 15:
+                continue
+            reviews.append({
+                "review_text": review_text,
+                "rating": None,
+                "author": "Reliance Customer",
+                "date": None,
+                "verified": None,
+                "source": "Live Scraped - Reliance Digital",
+                "product_id": None,
+                "product_url": url
+            })
+        if not reviews:
+            return [], "Page loaded, but zero review elements were found. Content requires client-side dynamic JavaScript rendering."
         return reviews, None
     except Exception as e:
         return [], f"Extraction parsing error: {e}"
@@ -746,8 +945,10 @@ def _scrape_generic_reviews(url):
                         "rating": None,
                         "author": "Customer",
                         "date": None,
-                        "verified": False,
-                        "source": "Live Scraped - Web"
+                        "verified": None,
+                        "source": "Live Scraped - Web",
+                        "product_id": None,
+                        "product_url": url
                     })
             if reviews:
                 break
